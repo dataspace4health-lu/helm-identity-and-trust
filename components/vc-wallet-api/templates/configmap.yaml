@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "app.chartname" . }}-configmap"
+  namespace: {{ .Release.Namespace }}
+data:
+  _features.conf: |
+    enabledFeatures = [
+    ]
+  db.conf: |
+    dataSource {
+      {{ if .Values.postgresql.enabled }}
+      jdbcUrl = "jdbc:postgresql://{{ include "app.chartname" . }}-postgresql-hl.{{ .Release.Namespace }}.svc.cluster.local:5432/{{ .Values.postgresql.auth.database }}"
+      driverClassName = "org.postgresql.Driver"
+      username = {{ .Values.postgresql.auth.username | quote }}
+      password = {{ .Values.postgresql.auth.password | quote }}
+      {{ else }}
+      jdbcUrl = {{ .Values.config.database.dataSource.jdbcUrl | quote }}
+      driverClassName = {{ .Values.config.database.dataSource.driverClassName | quote }}
+      username = {{ .Values.config.database.dataSource.username | quote }}
+      password = {{ .Values.config.database.dataSource.password | quote }}
+      {{ end }}
+      transactionIsolation = {{ .Values.config.database.dataSource.transactionIsolation | quote }}
+      maximumPoolSize = {{ .Values.config.database.dataSource.maximumPoolSize | quote }}
+      autoCommit = {{ .Values.config.database.dataSource.autoCommit | quote }}
+      dataSource {
+        journalMode = {{ .Values.config.database.dataSource.dataSource.journalMode | quote }}
+        fullColumnNames = {{ .Values.config.database.dataSource.dataSource.fullColumnNames | quote }}
+      }
+    }
+    recreateDatabaseOnStart = {{ .Values.config.database.recreateDatabaseOnStart | quote }}
+  web.conf: |
+    webHost = "0.0.0.0"
+    webPort = {{ .Values.config.http.port | quote }}
+  oidc.conf: |
+    publicBaseUrl = {{ .Values.config.oidc.publicBaseUrl | quote }}
+    providerName = {{ .Values.config.oidc.providerName | quote }}
+    oidcRealm = {{ .Values.config.oidc.oidcRealm | quote }}
+    oidcJwks = {{ .Values.config.oidc.oidcJwks | quote }}
+    authorizeUrl = {{ .Values.config.oidc.authorizeUrl | quote }}
+    accessTokenUrl = {{ .Values.config.oidc.accessTokenUrl | quote }}
+    logoutUrl = {{ .Values.config.oidc.logoutUrl | quote }}
+    clientId = {{ .Values.config.oidc.clientId | quote }}
+    clientSecret = {{ .Values.config.oidc.clientSecret | quote }}
+    keycloakUserApi = {{ .Values.config.oidc.keycloakUserApi | quote }}
+    jwksCache = {
+      cacheSize = {{ .Values.config.oidc.jwksCache.cacheSize | quote }}
+      cacheExpirationHours = {{ .Values.config.oidc.jwksCache.cacheSize | quote }}
+      rateLimit: {
+        bucketSize: {{ .Values.config.oidc.jwksCache.rateLimit.bucketSize | quote }}
+        refillRateMinutes: {{ .Values.config.oidc.jwksCache.rateLimit.refillRateMinutes | quote }}
+      }
+    }
+  registration-defaults.conf: |
+    // -- Hashicorp Vault TSE key example --
+    defaultKeyConfig: {
+      backend: tse
+      config: {
+        {{ if .Values.vault.enabled }}
+        server: "http://{{ include "app.chartname" . }}-vault-server-headless.{{ .Release.Namespace }}.svc.cluster.local:8200/v1/transit"
+        {{- range $index, $element := .Values.vault.server.args }}
+          {{- if $element | regexMatch "-dev-root-token-id=.*" }}
+            {{- $token := $element | regexFind "-dev-root-token-id=(.*)" }}
+            {{- $token := regexReplaceAll "-dev-root-token-id=(.*)" $token "$1" }} 
+        accessKey: {{ $token | quote }}
+          {{- end }}
+        {{- end }}
+        {{ else }}
+        server: {{ .Values.config.registrationDefaults.vault.server | quote }}
+        accessKey: {{ .Values.config.registrationDefaults.vault.accessKey | quote }}
+        {{ end }}
+      }
+      keyType: Ed25519
+    }
+    defaultDidConfig: {
+      method: web
+      config: {
+        domain: {{ .Values.config.registrationDefaults.did.domain | quote }}
+        path: "/wallet-api/registry/[random-uuid]" // automatically generates random UUID for path
+      }
+    }
+#  rejectionreason.conf: |
+#    reasons = [
+#        "Unknown sender",
+#        "Not relevant to me",
+#        "Unsure about accuracy",
+#        "Need more details",
+#    ]
+#  logins.conf: |
+#    enabledLoginMethods: [
+#        "email",
+#        "web3",
+#        "oidc",
+#        "passkeys"
+#    ]
+#  oci.conf: |
+#    vaultId = "ocid1.vault.oc1.eu-frankfurt-1.entcvrlraabc4.abtheljrpyimqvzheblr6ce4bqt2snnz36i4etlgtg32n4du5dbrnpgagf6q"
+#    compartmentId = "ocid1.compartment.oc1..aaaaaaaawirugoz35riiybcxsvf7bmelqsxo3sajaav5w3i2vqowcwqrllxa"

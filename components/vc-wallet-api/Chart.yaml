@@ -1,0 +1,15 @@
+apiVersion: v2
+appVersion:  v1.0.0
+description: VC Holder API Deployment
+name: vc-wallet-api
+version: 1.0.0
+
+dependencies:
+  - name: postgresql
+    version: 15.0.0
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    condition: postgresql.enabled
+  - name: vault
+    version: 1.4.11
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    condition: vault.enabled

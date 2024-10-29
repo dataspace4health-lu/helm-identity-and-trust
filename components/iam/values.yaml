@@ -1,0 +1,54 @@
+keycloak:
+  image:
+    tag: 23.0.7
+  auth:
+    adminUser: admin
+    adminPassword: "xfsc4Ntt!"
+  extraEnvVars:
+    - name: KEYCLOAK_EXTRA_ARGS
+      value: "--import-realm"
+    - name: PROXY_ADDRESS_FORWARDING
+      value: "true"
+  extraVolumeMounts:
+    - name: config
+      mountPath: "/opt/bitnami/keycloak/data/import/iam-realm.json"
+      subPath: "iam-realm.json"
+      readOnly: true
+  extraVolumes:
+    - name: config
+      configMap:
+        name: iam-realm-configmap
+        items:
+        - key: "iam-realm.json"
+          path: "iam-realm.json"
+  logging:
+    level: "DEBUG,io.quarkus:INFO,freemarker.cache:INFO,liquibase:INFO,org.hibernate:INFO,org.infinispan:INFO,org.keycloak.services.scheduled:INFO,org.keycloak.transaction:INFO,io.netty.buffer.PoolThreadCache:INFO,org.keycloak.models.sessions.infinispan:INFO"
+  production: false
+  proxy: edge
+  httpRelativePath: "/iam/"
+  postgresql:
+    enabled: true
+    auth: 
+      database: iam
+      username: iam 
+      password: "xfsc4Ntt!"
+      postgresPassword: "xfsc4Ntt!"
+    primary:
+      persistence:
+        size: 5Gi
+  ingress:
+    enabled: true
+    #ingressClassName: nginx
+    annotations:
+#      kubernetes.io/ingress.allow-http: "true"
+##      cert-manager.io/cluster-issuer: cert-manager-webhook
+#      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    extraHosts:
+      - name: ""
+    pathType: Prefix
+    path: /iam
+    extraTls:
+      - secretName: dataspace4health.local
+        hosts:
+          - dataspace4health.local

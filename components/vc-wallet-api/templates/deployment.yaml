@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ template "app.chartname" . }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/instance: {{ include "app.revision" . }}
+    app.kubernetes.io/part-of: rse
+    {{ include "app.istioLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "app.labels" . | nindent 8 }}
+      annotations:
+        {{- include "app.metricsAnnotations" . | nindent 8 }}
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+    spec:
+      securityContext:
+{{- include "app.securitycontext" . | nindent 8 }}
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecrets }}
+      {{- end }}
+      containers:
+      - name: {{ template "app.chartname" . }}
+        image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        {{- if and .Values.ingress.tls (gt (len .Values.ingress.tls) 0) }}
+        command: 
+          - /bin/sh
+        args:
+          - -c
+          - |
+            for f in /opt/{{ .Values.name }}/certs/*.crt; do 
+              echo "Adding certificate $f to keystore"
+              certname=$(echo $(basename $f) | sed 's|.crt||g' )
+              keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore ${JAVA_HOME}/lib/security/cacerts
+            done
+            
+            echo "Starting VC Holder API"
+            /waltid-wallet-api/bin/waltid-wallet-api
+          {{- end }}
+        {{- if .Values.useSecretRef }}
+        envFrom:
+          - secretRef:
+            name: {{ .Values.secretRefName }}
+        {{- else if .Values.useConfigMap }}
+        envFrom:
+          - configMapRef:
+              name: {{ .Values.configMapName }}
+        {{- else }}
+        env:
+          - name: SERVER_SERVLET_CONTEXT_PATH
+            value: /wallet/api
+        {{- end }}
+
+        {{- if .Values.secretEnv }}
+          {{- range $key, $value := .Values.secretEnv }}
+          - name: "{{ $key }}"
+            valueFrom:
+              secretRef:
+                name: "{{ $value.name }}"
+          {{- end }}
+        {{- end }}
+{{- if .Values.extraVars }}
+{{ toYaml .Values.extraVars | indent 8 }}
+{{- end }}
+        ports:
+        {{- if .Values.metrics.enabled }}
+          - name: monitoring
+            containerPort: {{ .Values.metrics.port }}
+        {{- end }}
+          - name: http
+            containerPort: {{ .Values.config.http.port }}
+        # readinessProbe:
+        #   httpGet:
+        #     path: /livez
+        #     port: {{ .Values.config.http.port }}
+        #   initialDelaySeconds: 5
+        #   periodSeconds: 5
+        #   successThreshold: 2
+        #   failureThreshold: 2
+        #   timeoutSeconds: 5
+        volumeMounts:
+          - name: wallet-config
+            mountPath: /waltid-wallet-api/config/db.conf
+            readOnly: true
+            subPath: db.conf
+          - name: wallet-config
+            mountPath: /waltid-wallet-api/config/web.conf
+            readOnly: true
+            subPath: web.conf
+          - name: wallet-config
+            mountPath: /waltid-wallet-api/config/oidc.conf
+            readOnly: true
+            subPath: oidc.conf
+          - name: wallet-auth-secret
+            mountPath: /waltid-wallet-api/config/auth.conf
+            readOnly: true
+            subPath: auth.conf
+          - mountPath: "/waltid-wallet-api/data/"
+            name: wallet-data
+          {{ $name := .Values.name }}
+          {{- range .Values.ingress.tls }}
+          - name: {{ .secretName | replace "." "-" }}
+            mountPath: /opt/{{ $name }}/certs/{{ .secretName }}.crt
+            subPath: {{ .secretName }}.crt
+            readOnly: true
+          {{- end }}
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+      volumes:
+      - name: wallet-config
+        configMap:
+          name: "{{ template "app.chartname" . }}-configmap"
+      - name: wallet-auth-secret
+        secret:
+          secretName: "{{ template "app.chartname" . }}-auth"
+      - name: wallet-data
+        persistentVolumeClaim:
+          claimName: "{{ template "app.chartname" . }}-data"
+      {{- range .Values.ingress.tls }}
+      - name: {{ .secretName | replace "." "-" }}
+        secret:
+          secretName: {{ .secretName }}
+          items:
+            - key: ca.crt
+              path: {{ .secretName }}.crt
+          defaultMode: 420
+      {{ end }}

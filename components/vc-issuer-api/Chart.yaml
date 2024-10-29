@@ -1,0 +1,11 @@
+apiVersion: v2
+appVersion:  v1.0.0
+description: VC Issuer API Deployment
+name: vc-issuer-api
+version: 1.0.0
+
+dependencies:
+  - name: vault
+    version: 1.4.11
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    condition: vault.enabled
