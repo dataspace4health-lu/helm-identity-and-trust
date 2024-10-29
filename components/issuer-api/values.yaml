@@ -1,7 +1,7 @@
 # -- Default number of instances to start 
 replicaCount: 1
 # -- Application name
-name: vc-issuer-api
+name: issuer-api
 # -- Ovverwrites application name
 # nameOverride: "issuer"
 

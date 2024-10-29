@@ -1,0 +1,5 @@
+**/charts
+**/helm
+**/*.lock
+**/tests/results
+**/node_modules

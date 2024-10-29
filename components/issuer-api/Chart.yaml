@@ -1,7 +1,7 @@
 apiVersion: v2
 appVersion:  v1.0.0
 description: VC Issuer API Deployment
-name: vc-issuer-api
+name: issuer-api
 version: 1.0.0
 
 dependencies:
