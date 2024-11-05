@@ -56,7 +56,7 @@ data:
     defaultKeyConfig: {
       backend: tse
       config: {
-        {{ if .Values.vault.enabled }}
+        {{- if .Values.vault.enabled }}
         server: "http://{{ include "app.chartname" . }}-vault-server-headless.{{ .Release.Namespace }}.svc.cluster.local:8200/v1/transit"
         {{- range $index, $element := .Values.vault.server.args }}
           {{- if $element | regexMatch "-dev-root-token-id=.*" }}
@@ -65,10 +65,10 @@ data:
         accessKey: {{ $token | quote }}
           {{- end }}
         {{- end }}
-        {{ else }}
+        {{- else }}
         server: {{ .Values.config.registrationDefaults.vault.server | quote }}
         accessKey: {{ .Values.config.registrationDefaults.vault.accessKey | quote }}
-        {{ end }}
+        {{- end }}
       }
       keyType: Ed25519
     }

@@ -155,15 +155,26 @@ ingress:
   enabled: true
   hosts:
     - paths:
-      - path: /
+      - path: /wallet/api
         port: 8080
         pathType: Prefix
-  # replacePath:
-  #   regex: /wallet/api(/|$)(.*)
-  #   replacement: /$2
-  # replaceBody:
-  #   regex: (/|^)swagger(/|$)(.*)
-  #   replacement: /wallet/api/swagger/$3
+  replacePath:
+    regex: /wallet/api(/|$)(.*)
+    replacement: /$2
+  replaceHeader:
+    header: Location
+    regex: (/|^)swagger(.*)
+    replacement: /wallet/api/swagger$2
+  replaceBody:
+    regex: /api\.json
+    replacement: /wallet/api/api.json
+    logLevel: -1
+    monitoring:
+      methods:
+      - GET
+      types:
+      - "*/*"
+      - application/javascript
   tls:
     - secretName: dataspace4health.local
       hosts:
