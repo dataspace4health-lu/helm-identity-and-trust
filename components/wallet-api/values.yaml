@@ -166,15 +166,16 @@ ingress:
     regex: (/|^)swagger(.*)
     replacement: /wallet/api/swagger$2
   replaceBody:
-    regex: /api\.json
-    replacement: /wallet/api/api.json
-    logLevel: -1
+    regex: (")?url(")?(\s)?(:) "\/("|api\.json")
+    replacement: url $4 "/wallet/api/$5
+    logLevel: -2
     monitoring:
       methods:
       - GET
       types:
       - "*/*"
       - application/javascript
+      - application/json
   tls:
     - secretName: dataspace4health.local
       hosts:
