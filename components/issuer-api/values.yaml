@@ -69,19 +69,6 @@ security:
 service:
   port: 8080
 
-vault:
-  enabled: true
-  injector:
-    enabled: false
-  server:
-    args: 
-      - server
-      - -dev
-      - -dev-root-token-id=root
-      - -dev-listen-address=0.0.0.0:8200
-    persistence:
-      size: 5Gi
-
 config:
   http:
     host: ""
@@ -91,7 +78,7 @@ config:
       read: 10s
       write: 10s
   vault:
-    addr: http://vc-issuer-vault-server-headless:8200
+    addr: http://key-mng-vault-server-headless:8200
     token: root
     key:
       supported: "ed25519,ecdsa-p256,ecdsa-p384,ecdsa-p521,rsa-2048"

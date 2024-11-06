@@ -63,10 +63,6 @@ spec:
               name: {{ .Values.configMapName }}
         {{- else }}
         env:
-          - name: SERVER_SERVLET_CONTEXT_PATH
-            value: /wallet/api
-          - name: ignoreUnknownKeys
-            value: true
         {{- end }}
 
         {{- if .Values.secretEnv }}
@@ -87,15 +83,15 @@ spec:
         {{- end }}
           - name: http
             containerPort: {{ .Values.config.http.port }}
-        # readinessProbe:
-        #   httpGet:
-        #     path: /livez
-        #     port: {{ .Values.config.http.port }}
-        #   initialDelaySeconds: 5
-        #   periodSeconds: 5
-        #   successThreshold: 2
-        #   failureThreshold: 2
-        #   timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: {{ .Values.config.http.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 2
+          failureThreshold: 2
+          timeoutSeconds: 5
         volumeMounts:
           - name: wallet-config
             mountPath: /waltid-wallet-api/config/db.conf
