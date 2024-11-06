@@ -149,7 +149,8 @@ config:
       server: null
       accessKey: null
     did:
-      domain: "https://dataspace4health.local"
+      domain: "dataspace4health.local"
+      path: /wallet/api
 
 ingress:
   enabled: true

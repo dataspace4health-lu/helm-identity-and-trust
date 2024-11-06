@@ -80,7 +80,7 @@ data:
       method: web
       config: {
         domain: {{ .Values.config.registrationDefaults.did.domain | quote }}
-        path: "/wallet-api/registry/[random-uuid]" // automatically generates random UUID for path
+        path: "{{ .Values.config.registrationDefaults.did.path }}/wallet-api/registry/[random-uuid]" // automatically generates random UUID for path
       }
     }
 #  rejectionreason.conf: |
