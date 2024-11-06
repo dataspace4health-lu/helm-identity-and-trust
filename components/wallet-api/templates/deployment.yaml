@@ -65,6 +65,8 @@ spec:
         env:
           - name: SERVER_SERVLET_CONTEXT_PATH
             value: /wallet/api
+          - name: ignoreUnknownKeys
+            value: true
         {{- end }}
 
         {{- if .Values.secretEnv }}
@@ -107,6 +109,10 @@ spec:
             mountPath: /waltid-wallet-api/config/oidc.conf
             readOnly: true
             subPath: oidc.conf
+          - name: wallet-config
+            mountPath: /waltid-wallet-api/config/registration-defaults.conf
+            readOnly: true
+            subPath: registration-defaults.conf
           - name: wallet-auth-secret
             mountPath: /waltid-wallet-api/config/auth.conf
             readOnly: true
