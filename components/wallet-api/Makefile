@@ -39,8 +39,8 @@ uninstall:
 
 	helm uninstall $(CURRENT_DIR) 2> /dev/null || true
 	kubectl delete pvc $(CURRENT_DIR)-data  2> /dev/null || true
-	kubectl delete pvc data-vc-wallet-api-postgresql-0  2> /dev/null || true
-	kubectl delete pvc data-vc-wallet-api-vault-server-0  2> /dev/null || true
+	kubectl delete pvc data-wallet-api-postgresql-0 2> /dev/null || true
+	kubectl delete pvc data-wallet-api-vault-server-0 2> /dev/null || true
 
 clean:
 	rm -rf charts helm

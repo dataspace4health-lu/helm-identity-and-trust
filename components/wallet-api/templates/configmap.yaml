@@ -62,12 +62,16 @@ data:
           {{- if $element | regexMatch "-dev-root-token-id=.*" }}
             {{- $token := $element | regexFind "-dev-root-token-id=(.*)" }}
             {{- $token := regexReplaceAll "-dev-root-token-id=(.*)" $token "$1" }} 
-        accessKey: {{ $token | quote }}
+        auth: {
+          accessKey: {{ $token | quote }}
+        }
           {{- end }}
         {{- end }}
         {{- else }}
         server: {{ .Values.config.registrationDefaults.vault.server | quote }}
-        accessKey: {{ .Values.config.registrationDefaults.vault.accessKey | quote }}
+        auth: {
+          accessKey: {{ .Values.config.registrationDefaults.vault.accessKey | quote }}
+        }
         {{- end }}
       }
       keyType: Ed25519
@@ -76,7 +80,7 @@ data:
       method: web
       config: {
         domain: {{ .Values.config.registrationDefaults.did.domain | quote }}
-        path: "/wallet-api/registry/[random-uuid]" // automatically generates random UUID for path
+        path: "{{ .Values.config.registrationDefaults.did.path }}/wallet-api/registry/[random-uuid]" // automatically generates random UUID for path
       }
     }
 #  rejectionreason.conf: |
