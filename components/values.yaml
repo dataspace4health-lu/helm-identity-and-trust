@@ -1,0 +1,59 @@
+iam:
+  nameOverride: iam
+  keycloak:
+    nameOverride: iam-keycloak
+    auth:
+      adminUser: admin
+      adminPassword: "xfsc4Ntt!"
+    httpRelativePath: "/iam/"
+    postgresql:
+      enabled: true
+      nameOverride: iam-postgresql
+      primary:
+        persistence:
+          size: 5Gi
+    ingress:
+      enabled: true
+      annotations:
+        nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+      extraHosts:
+      - name: ""
+      pathType: Prefix
+      path: /iam
+      extraTls:
+        - secretName: dataspace4health.local
+          hosts:
+           - dataspace4health.local
+wallet-api:
+  nameOverride: wallet-api
+  postgresql:
+    nameOverride: wallet-api-postgresql
+    enabled: true
+    auth:
+      postgresPassword: "xfsc4Ntt!"
+      database: vc-wallet-api
+      username: vc-wallet-api
+      password: "xfsc4Ntt!"
+    primary:
+      persistence:
+        enabled: true
+        size: 5Gi
+  config:
+    oidc:
+      publicBaseUrl: "https://dataspace4health.local"
+      providerName: keycloak
+      oidcRealm: "https://dataspace4health.local/iam/realms/waltid-keycloak-ktor"
+      oidcJwks: "${oidcRealm}/protocol/openid-connect/certs"
+      authorizeUrl: "${oidcRealm}/protocol/openid-connect/auth"
+      accessTokenUrl: "${oidcRealm}/protocol/openid-connect/token"
+      logoutUrl: "${oidcRealm}/protocol/openid-connect/logout"
+      clientId: "wallet_backend_prod"
+      clientSecret: "__DEFAULT_KEYCLOAK_CLIENT_SECRET__"
+      keycloakUserApi: "https://dataspace4health.local/iam/admin/realms/waltid-keycloak-ktor/users"
+      jwksCache:
+          cacheSize: 10
+          cacheExpirationHours: 24
+          rateLimit:
+              bucketSize: 10
+              refillRateMinutes: 1
+    

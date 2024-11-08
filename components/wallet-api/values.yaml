@@ -149,34 +149,21 @@ config:
       server: null
       accessKey: null
     did:
-      domain: "dataspace4health.local"
-      path: /wallet/api
+      domain: "https://dataspace4health.local"
 
 ingress:
   enabled: true
   hosts:
     - paths:
-      - path: /wallet/api
+      - path: /
         port: 8080
         pathType: Prefix
-  replacePath:
-    regex: /wallet/api(/|$)(.*)
-    replacement: /$2
-  replaceHeader:
-    header: Location
-    regex: (/|^)swagger(.*)
-    replacement: /wallet/api/swagger$2
-  replaceBody:
-    regex: (")?url(")?(\s)?(:) "\/("|api\.json")
-    replacement: url $4 "/wallet/api/$5
-    logLevel: -2
-    monitoring:
-      methods:
-      - GET
-      types:
-      - "*/*"
-      - application/javascript
-      - application/json
+  # replacePath:
+  #   regex: /wallet/api(/|$)(.*)
+  #   replacement: /$2
+  # replaceBody:
+  #   regex: (/|^)swagger(/|$)(.*)
+  #   replacement: /wallet/api/swagger/$3
   tls:
     - secretName: dataspace4health.local
       hosts:

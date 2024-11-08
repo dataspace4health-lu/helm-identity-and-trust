@@ -33,6 +33,7 @@ data:
     webHost = "0.0.0.0"
     webPort = {{ .Values.config.http.port | quote }}
   oidc.conf: |
+    
     publicBaseUrl = {{ .Values.config.oidc.publicBaseUrl | quote }}
     providerName = {{ .Values.config.oidc.providerName | quote }}
     oidcRealm = {{ .Values.config.oidc.oidcRealm | quote }}
