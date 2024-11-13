@@ -12,6 +12,9 @@ metadata:
     {{- if .Values.ingress.replaceBody }}
       {{- $middlewares = printf "%s-%s-%s" .Release.Namespace (include "app.chartname" .) "replacebodyregex@kubernetescrd" | append $middlewares }}
     {{- end }}
+    {{- if .Values.ingress.replaceHeader }}
+      {{- $middlewares = printf "%s-%s-%s" .Release.Namespace (include "app.chartname" .) "replaceheaderregex@kubernetescrd" | append $middlewares }}
+    {{- end }}
     {{- if .Values.ingress.headers }}
       {{- $middlewares = printf "%s-%s-%s" .Release.Namespace (include "app.chartname" .) "headers@kubernetescrd" | append $middlewares }}
     {{- end }}

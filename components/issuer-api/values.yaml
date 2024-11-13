@@ -100,6 +100,21 @@ ingress:
   replacePath:
     regex: /issuer/api(/|$)(.*)
     replacement: /$2
+  replaceHeader:
+    header: Location
+    regex: (/|^)swagger(.*)
+    replacement: /issuer/api/swagger$2
+  replaceBody:
+    regex: (")?url(")?(\s)?(:) "\/("|api\.json")
+    replacement: url $4 "/issuer/api/$5
+    logLevel: -2
+    monitoring:
+      methods:
+      - GET
+      types:
+      - "*/*"
+      - application/javascript
+      - application/json
   tls:
     - secretName: dataspace4health.local
       hosts:
