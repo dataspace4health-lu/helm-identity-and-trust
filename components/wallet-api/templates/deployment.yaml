@@ -82,6 +82,24 @@ spec:
         {{- end }}
           - name: http
             containerPort: {{ .Values.config.http.port }}
+        startupProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - |
+              curl -X 'POST' \
+              'http://0.0.0.0:8080/wallet-api/auth/register' \
+              -H 'accept: */*' \
+              -H 'Content-Type: application/json' \
+              -d '{
+              "name": {{ .Values.setup.name }},
+              "email": {{ .Values.setup.email }},
+              "password": {{ .Values.setup.pass }},
+              "type": {{ .Values.setup.type }}
+              }'
+          failureThreshold: 30
+          periodSeconds: 10      
         readinessProbe:
           httpGet:
             path: /livez

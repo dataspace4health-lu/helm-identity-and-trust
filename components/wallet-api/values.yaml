@@ -93,7 +93,11 @@ vault:
       - -dev-listen-address=0.0.0.0:8200
     persistence:
       size: 5Gi
-
+setup:
+  name: "test user"
+  email: "test@test.com "
+  pass: "password"
+  type: "email"
 config:
   http:
     host: ""
