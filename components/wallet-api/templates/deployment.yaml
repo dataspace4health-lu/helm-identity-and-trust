@@ -64,7 +64,6 @@ spec:
         {{- else }}
         env:
         {{- end }}
-
         {{- if .Values.secretEnv }}
           {{- range $key, $value := .Values.secretEnv }}
           - name: "{{ $key }}"
@@ -93,6 +92,10 @@ spec:
           failureThreshold: 2
           timeoutSeconds: 5
         volumeMounts:
+          - name: wallet-config
+            mountPath: /waltid-wallet-api/config/_features.conf
+            readOnly: true
+            subPath: _features.conf
           - name: wallet-config
             mountPath: /waltid-wallet-api/config/db.conf
             readOnly: true

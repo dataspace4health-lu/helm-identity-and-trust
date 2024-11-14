@@ -35,10 +35,6 @@ $(SUBDIRS):
 install:
 	helm install  $(CURRENT_DIR) helm/*.tgz
 
-install_scenario:
-	helm install  $(CURRENT_DIR) helm/*.tgz
-	kubectl apply -f test/test-app.yaml
-
 test:
 	$(test)
 
@@ -47,16 +43,11 @@ uninstall:
 
 	helm uninstall $(CURRENT_DIR) 2> /dev/null || true
 
-	kubectl delete pvc --all
-uninstall_scenario:
-	docker delete pod playwright 2> /dev/null || true
-	
-	kubectl delete deployment test-server 2> /dev/null || true
-	kubectl delete service test-server-service 2> /dev/null || true
-	kubectl delete ingress test-server-ingress 2> /dev/null || true
+	kubectl delete pvc waltid-wallet-api-data 2> /dev/null || true
+	kubectl delete pvc data-waltid-wallet-api-postgresql-0 2> /dev/null || true
+	kubectl delete pvc data-waltid-vault-server-0 2> /dev/null || true
+	kubectl delete pvc data-waltid-iam-postgresql-0 2> /dev/null || true
 
-	helm uninstall $(CURRENT_DIR) 2> /dev/null || true
-	kubectl delete pvc --all
 clean: $(SUBDIRS)
 	@if [ "$(SUBDIR)" != "test" ]; then \
     	rm -rf charts helm; \

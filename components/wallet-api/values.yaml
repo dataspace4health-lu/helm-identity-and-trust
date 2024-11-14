@@ -118,6 +118,7 @@ config:
         fullColumnNames: false
     recreateDatabaseOnStart: false
   oidc:
+    enableOidcLogin: "false"
     publicBaseUrl: "https://wallet-dev.walt.id"
     providerName: keycloak
     oidcRealm: "https://keycloak.walt-test.cloud/realms/waltid-keycloak-ktor"
@@ -149,21 +150,34 @@ config:
       server: null
       accessKey: null
     did:
-      domain: "https://dataspace4health.local"
+      domain: "dataspace4health.local"
+      path: /wallet/api
 
 ingress:
   enabled: true
   hosts:
     - paths:
-      - path: /
+      - path: /wallet/api
         port: 8080
         pathType: Prefix
-  # replacePath:
-  #   regex: /wallet/api(/|$)(.*)
-  #   replacement: /$2
-  # replaceBody:
-  #   regex: (/|^)swagger(/|$)(.*)
-  #   replacement: /wallet/api/swagger/$3
+  replacePath:
+    regex: /wallet/api(/|$)(.*)
+    replacement: /$2
+  replaceHeader:
+    header: Location
+    regex: (/|^)swagger(.*)
+    replacement: /wallet/api/swagger$2
+  replaceBody:
+    regex: (")?url(")?(\s)?(:) "\/("|api\.json")
+    replacement: url $4 "/wallet/api/$5
+    logLevel: -2
+    monitoring:
+      methods:
+      - GET
+      types:
+      - "*/*"
+      - application/javascript
+      - application/json
   tls:
     - secretName: dataspace4health.local
       hosts:

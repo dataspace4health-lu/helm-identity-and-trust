@@ -6,6 +6,7 @@ metadata:
 data:
   _features.conf: |
     enabledFeatures = [
+      "oidc"
     ]
   db.conf: |
     dataSource {
@@ -33,11 +34,11 @@ data:
     webHost = "0.0.0.0"
     webPort = {{ .Values.config.http.port | quote }}
   oidc.conf: |
-    
     publicBaseUrl = {{ .Values.config.oidc.publicBaseUrl | quote }}
     providerName = {{ .Values.config.oidc.providerName | quote }}
     oidcRealm = {{ .Values.config.oidc.oidcRealm | quote }}
     oidcJwks = {{ .Values.config.oidc.oidcJwks | quote }}
+    oidcScopes = {{ .Values.config.oidc.oidcScopes }}
     authorizeUrl = {{ .Values.config.oidc.authorizeUrl | quote }}
     accessTokenUrl = {{ .Values.config.oidc.accessTokenUrl | quote }}
     logoutUrl = {{ .Values.config.oidc.logoutUrl | quote }}
