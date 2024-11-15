@@ -93,12 +93,13 @@ vault:
       - -dev-listen-address=0.0.0.0:8200
     persistence:
       size: 5Gi
-setup:
-  name: "test user"
-  email: "test@test.com "
-  pass: "password"
-  type: "email"
+
 config:
+  init:
+    account:
+      name: "Ntt Data"
+      email: "wallet@ntt.com"
+      pass: "xfsc4Ntt!"      
   http:
     host: ""
     port: 8080
@@ -122,11 +123,11 @@ config:
         fullColumnNames: false
     recreateDatabaseOnStart: false
   oidc:
-    enableOidcLogin: "false"
     publicBaseUrl: "https://wallet-dev.walt.id"
     providerName: keycloak
     oidcRealm: "https://keycloak.walt-test.cloud/realms/waltid-keycloak-ktor"
     oidcJwks: "${oidcRealm}/protocol/openid-connect/certs"
+    oidcScopes: ["oidc","roles"]
     authorizeUrl: "${oidcRealm}/protocol/openid-connect/auth"
     accessTokenUrl: "${oidcRealm}/protocol/openid-connect/token"
     logoutUrl: "${oidcRealm}/protocol/openid-connect/logout"
