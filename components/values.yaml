@@ -44,7 +44,7 @@ wallet-api:
 
       providerName: keycloak
       # Enter the realm URL
-      oidcRealm: "https://dataspace4health.local/iam/realms/waltid-keycloak-ktor"
+      oidcRealm: "https://dataspace4health.local/iam/realms/ds4h"
       # JWKS (to verify access keys the user claims to received through OIDC server)
       oidcJwks: "${oidcRealm}/protocol/openid-connect/certs"
       oidcScopes: ["oidc","roles"]
@@ -57,7 +57,7 @@ wallet-api:
       clientSecret: "__DEFAULT_KEYCLOAK_CLIENT_SECRET__"
 
       # Keycloak authentication strategy
-      keycloakUserApi: "https://dataspace4health.local/iam/admin/realms/waltid-keycloak-ktor/users"
+      keycloakUserApi: "https://dataspace4health.local/iam/admin/realms/ds4h/users"
 
       # JWKS is cached:
       jwksCache:

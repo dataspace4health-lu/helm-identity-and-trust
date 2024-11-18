@@ -85,8 +85,8 @@ config:
       signing: ""
   authentication:
     name: keycloak
-    authorizeUrl: "https://keycloak.walt-test.cloud/realms/waltid-keycloak-ktor/protocol/openid-connect/auth"
-    accessTokenUrl: "https://keycloak.walt-test.cloud/realms/waltid-keycloak-ktor/protocol/openid-connect/token"
+    authorizeUrl: "https://keycloak.walt-test.cloud/realms/ds4h/protocol/openid-connect/auth"
+    accessTokenUrl: "https://keycloak.walt-test.cloud/realms/ds4h/protocol/openid-connect/token"
     clientId: "issuer_api"
     clientSecret: "secret"
 

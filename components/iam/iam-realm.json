@@ -1,6 +1,6 @@
 {
   "id": "3a0787a8-2952-4743-9c39-009f92c7c5bb",
-  "realm": "waltid-keycloak-ktor",
+  "realm": "ds4h",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": false,
@@ -56,7 +56,7 @@
       },
       {
         "id": "c4f20853-e4a1-47ff-811b-6c817732a8c0",
-        "name": "default-roles-waltid-keycloak-ktor",
+        "name": "default-roles-ds4h",
         "description": "${role_default-roles}",
         "composite": true,
         "composites": {
@@ -415,7 +415,7 @@
   "groups": [],
   "defaultRole": {
     "id": "c4f20853-e4a1-47ff-811b-6c817732a8c0",
-    "name": "default-roles-waltid-keycloak-ktor",
+    "name": "default-roles-ds4h",
     "description": "${role_default-roles}",
     "composite": true,
     "clientRole": false,
@@ -475,7 +475,7 @@
       "disableableCredentialTypes": [],
       "requiredActions": [],
       "realmRoles": [
-        "default-roles-waltid-keycloak-ktor"
+        "default-roles-ds4h"
       ],
       "clientRoles": {
         "realm-management": [
@@ -533,13 +533,13 @@
       "clientId": "account",
       "name": "${client_account}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/waltid-keycloak-ktor/account/",
+      "baseUrl": "/realms/ds4h/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/realms/waltid-keycloak-ktor/account/*"
+        "/realms/ds4h/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -577,13 +577,13 @@
       "clientId": "account-console",
       "name": "${client_account-console}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/waltid-keycloak-ktor/account/",
+      "baseUrl": "/realms/ds4h/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/realms/waltid-keycloak-ktor/account/*"
+        "/realms/ds4h/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -1027,13 +1027,13 @@
       "clientId": "security-admin-console",
       "name": "${client_security-admin-console}",
       "rootUrl": "${authAdminUrl}",
-      "baseUrl": "/admin/waltid-keycloak-ktor/console/",
+      "baseUrl": "/admin/ds4h/console/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/admin/waltid-keycloak-ktor/console/*"
+        "/admin/ds4h/console/*"
       ],
       "webOrigins": [
         "+"

@@ -125,7 +125,7 @@ config:
   oidc:
     publicBaseUrl: "https://wallet-dev.walt.id"
     providerName: keycloak
-    oidcRealm: "https://keycloak.walt-test.cloud/realms/waltid-keycloak-ktor"
+    oidcRealm: "https://keycloak.walt-test.cloud/realms/ds4h"
     oidcJwks: "${oidcRealm}/protocol/openid-connect/certs"
     oidcScopes: ["oidc","roles"]
     authorizeUrl: "${oidcRealm}/protocol/openid-connect/auth"
@@ -133,7 +133,7 @@ config:
     logoutUrl: "${oidcRealm}/protocol/openid-connect/logout"
     clientId: "wallet_backend_prod"
     clientSecret: "__DEFAULT_KEYCLOAK_CLIENT_SECRET__"
-    keycloakUserApi: "https://keycloak.walt-test.cloud/admin/realms/waltid-keycloak-ktor/users"
+    keycloakUserApi: "https://keycloak.walt-test.cloud/admin/realms/ds4h/users"
     jwksCache:
         cacheSize: 10
         cacheExpirationHours: 24
