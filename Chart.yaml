@@ -17,8 +17,8 @@ appVersion: "0.0.1"
 dependencies:
   - name: iam
     version: 1.0.0
-    repository: "file://iam"
+    repository: "file://components/iam"
   - name: wallet-api
     version: 1.0.0
-    repository: "file://wallet-api"
+    repository: "file://components/wallet-api"
   

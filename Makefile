@@ -18,8 +18,8 @@ fi
 docker rm -f playwright
 endef
 
-SUBDIRS := $(filter-out test/. charts/. helm/. template/. , $(wildcard */.))
-CURRENT_DIR := waltid #$(notdir $(shell pwd))
+SUBDIRS := $(wildcard components/*/.)
+CURRENT_DIR := waltid# $(shell echo $(notdir $(shell pwd)) | tr '[:upper:]' '[:lower:]')
 
 .PHONY: all build $(SUBDIRS) install test uninstall clean
 
@@ -33,7 +33,7 @@ $(SUBDIRS):
 	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 install:
-	helm install  $(CURRENT_DIR) helm/*.tgz
+	helm install $(CURRENT_DIR) helm/*.tgz
 
 test:
 	$(test)
