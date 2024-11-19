@@ -18,15 +18,19 @@ fi
 kubectl delete pod playwright
 endef
 
+SUBDIRS := $(wildcard src/*/.)
 CURRENT_DIR := $(notdir $(shell pwd))
 
 .PHONY: all build install test uninstall clean
 
 all: build install test uninstall clean
 
-build: helm/*.tgz
-helm/*.tgz: 
+build: $(SUBDIRS) helm/*.tgz
+helm/*.tgz:
 	$(build)
+
+$(SUBDIRS):
+	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 install:
 	helm install $(CURRENT_DIR) helm/*.tgz

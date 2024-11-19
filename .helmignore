@@ -1,4 +1,5 @@
-**/README.md
-**/Makefile
-**/helm
-**/tests
+.git
+README.md
+Makefile
+helm
+tests
