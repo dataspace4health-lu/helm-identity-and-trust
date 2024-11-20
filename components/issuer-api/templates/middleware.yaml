@@ -47,7 +47,7 @@ spec:
 {{- end }}
 {{- if .Values.ingress.replaceHeader }}
 ---
-# Replace heathers with regex
+# Replace Headers with regex
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:

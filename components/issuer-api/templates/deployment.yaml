@@ -50,8 +50,8 @@ spec:
               keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore ${JAVA_HOME}/lib/security/cacerts
             done
             
-            echo "Starting VC Issuer API"
-            /waltid-issuer-api/bin/waltid-issuer-api
+            echo "Starting VC Issuer API" 
+            /app/bin/waltid-ssikit serve -b 0.0.0.0
           {{- end }}
         {{- if .Values.useSecretRef }}
         envFrom:
@@ -85,7 +85,7 @@ spec:
             containerPort: {{ .Values.config.http.port }}
         readinessProbe:
           httpGet:
-            path: /livez
+            path: /health
             port: {{ .Values.config.http.port }}
           initialDelaySeconds: 5
           periodSeconds: 5
@@ -93,9 +93,12 @@ spec:
           failureThreshold: 2
           timeoutSeconds: 5
         volumeMounts:
-          - name: issuer-web-config
-            mountPath: "/waltid-issuer-api/config/"
+          - name: issuer-api-config
+            mountPath: "/app/config/signatory.conf"
+            subPath: "signatory.conf"
             readOnly: true
+          - mountPath: "/app/data/revocation"
+            name: data-volume
           {{ $name := .Values.name }}
           {{- range .Values.ingress.tls }}
           - name: {{ .secretName | replace "." "-" }}
@@ -106,9 +109,15 @@ spec:
         resources:
 {{ toYaml .Values.resources | indent 10 }}
       volumes:
-      - name: issuer-web-config
+      - name: issuer-api-config
         configMap:
+          items:
+            - key: signatory.conf
+              path: signatory.conf
           name: "{{ template "app.chartname" . }}-configmap"
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: data-volume-claim
       {{- range .Values.ingress.tls }}
       - name: {{ .secretName | replace "." "-" }}
         secret:
