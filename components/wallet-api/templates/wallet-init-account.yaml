@@ -1,4 +1,3 @@
-{{- if .Values.vault.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -34,7 +33,27 @@ spec:
               }')
           if [ $response -eq 201 ]; then
             echo "Successfully registered wallet!"
-            exit 0
+            sleep 5
+            loginResponse=$(curl -s -o /dev/null -w "%{http_code}" -X 'POST' \
+            'http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/auth/login' \
+              -H 'accept: */*' \
+              -H 'Content-Type: application/json' \
+              -d '{
+              "type": "email",
+              "email": "{{ .Values.config.init.account.email }}",
+              "password": "{{ .Values.config.init.account.pass }}"
+            }')
+            if [ $loginResponse -eq 200 ]; then
+              sleep 2
+              echo "Successfull"
+              curl   -X 'GET' \
+              'http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/accounts/wallets' \
+              -H 'accept: */*' 
+              exit 0
+            else 
+              echo "failed"
+              exit 1
+            fi
           else
             echo "Failed to register wallet. Response: $response"
             exit 1
@@ -43,7 +62,7 @@ spec:
               
       restartPolicy: Never
   backoffLimit: 4
-{{- end }}
+
 
 
 

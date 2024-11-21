@@ -26,6 +26,8 @@ iam:
            - dataspace4health.local
 wallet-api:
   nameOverride: wallet-api
+  vault:
+    nameOverride: wallet-api-vault
   postgresql:
     nameOverride: wallet-api-postgresql
     enabled: true
@@ -39,6 +41,10 @@ wallet-api:
         enabled: true
         size: 5Gi
   config:
+    registrationDefaults:
+      did:
+        domain: "dataspace4health.local"
+        path: /wallet/api  
     oidc:
       publicBaseUrl: "https://dataspace4health.local/wallet/api"
 
