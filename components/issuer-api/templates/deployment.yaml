@@ -51,7 +51,7 @@ spec:
             done
             
             echo "Starting VC Issuer API" 
-            /app/bin/waltid-ssikit serve -b 0.0.0.0
+            JAVA_OPTS="-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG" /app/bin/waltid-ssikit serve -b 0.0.0.0
           {{- end }}
         {{- if .Values.useSecretRef }}
         envFrom:
@@ -63,6 +63,9 @@ spec:
               name: {{ .Values.configMapName }}
         {{- else }}
         env:
+          - name: JAVA_OPTS
+            value: >
+             "-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG"
         {{- end }}
 
         {{- if .Values.secretEnv }}

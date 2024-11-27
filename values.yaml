@@ -29,6 +29,8 @@ wallet-api:
   postgresql:
     nameOverride: wallet-api-postgresql
     enabled: true
+  vault:
+    nameOverride: wallet-api-vault
     auth:
       postgresPassword: "xfsc4Ntt!"
       database: vc-wallet-api

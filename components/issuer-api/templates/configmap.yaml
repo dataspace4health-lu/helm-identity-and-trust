@@ -5,11 +5,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   signatory.conf: |
-        {
-            "proofConfig": {
-                "issuerDid": "",
-                "proofType": "LD_PROOF",
-                "credentialsEndpoint": {{ .Values.config.signatory.credentialsEndpoint | quote }}
-            },
-            "templatesFolder": "vc-templates-runtime"
-        }
+    proofConfig {
+      issuerDid="did:web:wallet.walt.id:wallet-api:registry:portal"
+      issuerVerificationMethod="todo"
+      proofType="LD_PROOF"
+      domain="wallet.walt.id"
+      nonce="cfaf324fads"
+      credentialsEndpoint={{ .Values.config.signatory.credentialsEndpoint | quote }}
+    }
+    templatesFolder: "vc-templates-runtime"
+       
