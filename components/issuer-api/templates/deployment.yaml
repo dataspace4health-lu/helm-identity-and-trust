@@ -49,10 +49,130 @@ spec:
               certname=$(echo $(basename $f) | sed 's|.crt||g' )
               keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore ${JAVA_HOME}/lib/security/cacerts
             done
-            
             echo "Starting VC Issuer API" 
-            JAVA_OPTS="-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG" /app/bin/waltid-ssikit serve -b 0.0.0.0
+            /app/bin/waltid-ssikit serve -b 0.0.0.0 &
+            #JAVA_OPTS="-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG" /app/bin/waltid-ssikit serve -b 0.0.0.0
+            if [ -n  "{{ .Values.config.registry.service.name }}" ]; then
+              while true; do 
+                # give some time for wallet to start and be ready
+                  echo "Waiting 5 seconds before trying..."
+                  sleep 10
+                  vault_url='http://{{ .Values.config.vault.service.name }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.vault.service.http.Port }}'
+                  url='http://{{ .Values.config.registry.service.name }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.registry.service.http.Port }}/wallet-api/registry'
+                  echo $url
+                  echo $vault_url
+                   # get DID from the wallet
+                  RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X 'GET' \
+                  "$url")
+                   # get key name
+                  RESPONSEKEY=$(curl -s -w "HTTPSTATUS:%{http_code}" -X 'LIST' \
+                  --header "X-Vault-Token: {{ .Values.config.vault.service.tesToken }}" \
+                  "$vault_url/v1/transit/keys")
+                  echo "this is the response of the key $RESPONSEKEY"
+                  BODY=$(echo "$RESPONSE" | sed -e 's/HTTPSTATUS:.*//')
+                  STATUS_CODE=$(echo "$RESPONSE" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+                  BODYKEY=$(echo "$RESPONSEKEY" | sed -e 's/HTTPSTATUS:.*//')
+                  STATUS_CODE_KEY=$(echo "$RESPONSEKEY" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+                  KEYS_NAMES=$(echo "$BODYKEY" | awk -F'"keys":\\[|\\]' '{print $2}')
+                  RESULTKEY=$(echo "$KEYS_NAMES" | awk -F',' '
+                  {
+                    for (i = 1; i <= NF; i++) {
+                      gsub(/"| /, "", $i)  # Remove quotes and spaces
+                      if ($i != "key1" && $i != "key2" && $i != "key3") {
+                        print $i
+                      }
+                    }
+                  }')
+                  echo "key status ID $STATUS_CODE_KEY"
+                  echo "key ID $RESULTKEY"
+                  echo "this is the registry id $RESPONSE"
+                  if [ "$STATUS_CODE" -eq 200 ] && [ "$STATUS_CODE_KEY" -eq 200 ] && [ -n "$RESULTKEY" ] && [ -n "$BODY" ]; then
+                    # change the key to exportable 
+                    updateKeyStatus=$(curl -s -o /dev/null -w "%{http_code}"\
+                    --header "X-Vault-Token: root" \
+                    --request POST \
+                    --data '{"exportable":true}' \
+                    "$vault_url/v1/transit/keys/$RESULTKEY/config")
+                    echo "Received 200 OK from the API."
+                    echo $BODY
+                    did=$( echo "$BODY" | awk -F'"' '{print $2}')
+                    registryId=$(echo $BODY | awk -F':' '{gsub(/[^a-zA-Z0-9-]/, "", $NF); print $NF}')
+                    didFile=$(curl -s  -X 'GET' \
+                    "$url/$registryId/did.json")
+                    echo $registryId
+                    echo $didFile
+                    echo "code $updateKeyStatus"
+                    if [ "$updateKeyStatus" -eq 200 ]; then
+                      KEY=$(curl -s -w "HTTPSTATUS:%{http_code}" -X 'GET' \
+                      --header "X-Vault-Token: {{ .Values.config.vault.service.tesToken }}" \
+                      "$vault_url/v1/transit/export/signing-key/$RESULTKEY/1")
+                      KEY_CONTENT=$(echo "$KEY" | sed -e 's/HTTPSTATUS:.*//')
+                      GET_KEY_CODE=$(echo "$KEY" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+                      COMBINED_KEY=$(echo "$KEY_CONTENT" | awk -F'"keys":\\{"1":"|"}' '{print $2}')
+                      if [ "$GET_KEY_CODE" -eq 200 ]; then
+                        echo "$COMBINED_KEY" | base64 -d > combined_key.bin
+                        # Extract the private key (first 32 bytes)
+                        dd if=combined_key.bin of=private_key.bin bs=1 count=32 2>/dev/null
+
+                        # Extract the public key (last 32 bytes)
+                        dd if=combined_key.bin of=public_key.bin bs=1 skip=32 count=32 2>/dev/null
+
+                        # Encode the extracted keys back to Base64 for readability
+                        PRIVATE_KEY_BASE64=$(base64 < private_key.bin)
+                        PUBLIC_KEY_BASE64=$(base64 < public_key.bin)
+                        # Clean up binary files
+                        rm -f combined_key.bin private_key.bin public_key.bin
+                        break
+                        
+                      fi
+                    fi
+                  fi
+              done
+              # Import the key to the service
+              kid=$(echo "$UPDATED_DID" | awk -F'"' '/"id": "did:web/ {print $4}')
+              
+              UPDATED_DID=$(echo "$didFile" | awk -v kid_val="$RESULTKEY" '
+                            BEGIN { RS=""; FS=""; }
+                            {
+                                # Match the "publicKeyJwk" block
+                                sub(/"publicKeyJwk": *\{/, "&\n\"kid\": \"" kid_val "\",");
+                                print;
+                            }
+                            ')
+              kid=$(echo "$UPDATED_DID" | awk -F'"' '
+              /"verificationMethod"/ { in_verification_method = 1 }
+              in_verification_method && /"id":/ {                 
+                  for (i = 1; i <= NF; i++)                       
+                      if ($i ~ /^did:web/ && $i ~ /#/) {           
+                          print $i
+                          in_verification_method = 0   
+                          exit           
+                      }
+              }')
+              echo "final did $UPDATED_DID "
+              sleep 5 
+              curl -X 'POST' \
+              'http://0.0.0.0:7002/keys/import' \
+              -H 'accept: application/json' \
+              -H 'Content-Type: application/json' \
+              -d "{
+                \"kty\": \"OKP\",
+                \"use\": \"sig\",
+                \"crv\": \"Ed25519\",
+                \"kid\": \"$kid\",
+                \"d\": \"$PRIVATE_KEY_BASE64\",
+                \"x\": \"$PUBLIC_KEY_BASE64\",
+                \"alg\": \"EdDSA\"
+                  }" 
+              echo $UPDATED_DID > /app/data/did/created/did%3Aweb%3Adataspace4health.local%3Awallet%3Aapi%3Awallet-api%3Aregistry%3Antt &
+              while true;do sleep 3600;done
+            fi
+          - | 
+            echo "process completed"
+
+
           {{- end }}
+      
         {{- if .Values.useSecretRef }}
         envFrom:
           - secretRef:
@@ -63,9 +183,9 @@ spec:
               name: {{ .Values.configMapName }}
         {{- else }}
         env:
-          - name: JAVA_OPTS
-            value: >
-             "-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG"
+        #  - name: JAVA_OPTS
+        #    value: >
+        #     "-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG"
         {{- end }}
 
         {{- if .Values.secretEnv }}
@@ -76,6 +196,7 @@ spec:
                 name: "{{ $value.name }}"
           {{- end }}
         {{- end }}
+
 {{- if .Values.extraVars }}
 {{ toYaml .Values.extraVars | indent 8 }}
 {{- end }}

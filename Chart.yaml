@@ -21,4 +21,6 @@ dependencies:
   - name: wallet-api
     version: 1.0.0
     repository: "file://components/wallet-api"
-  
+  - name: issuer-api
+    version: 1.0.0
+    repository: "file://components/issuer-api"

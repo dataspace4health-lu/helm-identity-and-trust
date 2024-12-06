@@ -47,6 +47,7 @@ uninstall:
 	kubectl delete pvc data-waltid-wallet-api-postgresql-0 2> /dev/null || true
 	kubectl delete pvc data-waltid-vault-server-0 2> /dev/null || true
 	kubectl delete pvc data-waltid-iam-postgresql-0 2> /dev/null || true
+	kubectl delete pvc data-waltid-wallet-api-vault-server-0 2> /dev/null || true
 
 clean: $(SUBDIRS)
 	@if [ "$(SUBDIR)" != "test" ]; then \

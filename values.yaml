@@ -41,6 +41,15 @@ wallet-api:
         enabled: true
         size: 5Gi
   config:
+    registrationDefaults:
+      did:
+        domain: "dataspace4health.local"
+        path: "/wallet/api/wallet-api/registry/ntt"
+      issuer:
+        name: "ntt-data"
+        description: "NTT Data Issuer"
+        uiEndpoint: "https://dataspace4health.local/portal/credentials?ids="
+        configurationEndpoint: "https://dataspace4health.local/issuer/api/.well-known/openid-credential-issuer"
     oidc:
       publicBaseUrl: "https://dataspace4health.local/wallet/api"
 
@@ -68,5 +77,18 @@ wallet-api:
         rateLimit:
           bucketSize: 10
           refillRateMinutes: 1
-
+issuer-api:
+   nameOverride: issuer-api
+   config:
+    vault:
+      service:
+        name: waltid-wallet-api-vault-server-headless
+        tesToken: root
+        http:
+          Port:  8200  
+    registry:
+      service: 
+        name: waltid-wallet-api
+        http:
+          Port:  8080
     

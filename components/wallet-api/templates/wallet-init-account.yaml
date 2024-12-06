@@ -1,4 +1,4 @@
-{{- if .Values.vault.enabled }}
+{{- if .Values.config.init.account }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -18,29 +18,205 @@ spec:
         image: curlimages/curl:latest
         command: ["sh", "-c"]
         args:
-        - |          
+        - |
+          set -xe
+
           # give some time for wallet to start and be ready
-          sleep 10
+          sleep 60
           
-          response=$(curl -s -o /dev/null -w "%{http_code}" -X 'POST' \
-              'http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/auth/register' \
-              -H 'accept: */*' \
-              -H 'Content-Type: application/json' \
-              -d '{
-              "name": "{{ .Values.config.init.account.name }}",
-              "email": "{{ .Values.config.init.account.email }}",
-              "password": "{{ .Values.config.init.account.pass }}",
-              "type": "email"
-              }')
-          if [ $response -eq 201 ]; then
+          body=""
+          code=0
+          
+          #################################################
+          # Register wallet account
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'POST' \
+            'http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/auth/register' \
+            -H 'accept: */*' \
+            -H 'Content-Type: application/json' \
+            -d '{
+            "name": "{{ .Values.config.init.account.name }}",
+            "email": "{{ .Values.config.init.account.email }}",
+            "password": "{{ .Values.config.init.account.pass }}",
+            "type": "email"
+            }')
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 201 ]; then
             echo "Successfully registered wallet!"
-            exit 0
+          elif [ $code -eq 409 ]; then
+            echo "Account already exists!"
           else
-            echo "Failed to register wallet. Response: $response"
+            echo "Failed to register wallet. Response: $code"
             exit 1
           fi
-          exit
-              
+
+          #################################################
+          # Login user
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'POST' \
+            'http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/auth/login' \
+            -H 'accept: */*' \
+            -H 'Content-Type: application/json' \
+            -d '{
+            "email": "{{ .Values.config.init.account.email }}",
+            "password": "{{ .Values.config.init.account.pass }}",
+            "type": "email"
+            }')
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Login successful"
+          else
+            echo "Login failed"
+            exit 1
+          fi
+
+          token=$(echo $body | grep -oE '"token":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
+
+          #################################################
+          # Retrieve wallet
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'GET' \
+            'http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/accounts/wallets' \
+            -H 'accept: application/json' \
+            -H "Authorization: Bearer $token" \
+            )
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Wallets loaded successfully"
+          else
+            echo "Invalid authentication"
+            exit 1
+          fi
+
+          walletId=$(echo $body | grep -m1 -oE '"id":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
+          #################################################
+          # Get existing default DID
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'GET' \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids" \
+            -H 'accept: application/json' \
+            -H "Authorization: Bearer $token")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Got list of DIDs"
+          else
+            echo "Invalid authentication"
+            exit 1
+          fi
+
+          did=$(echo $body | grep -m1 -oE '"did":"[^"]+"' | awk -F '":"' '{gsub(/"/,"",$2); print $2}')
+          # #################################################
+          # # Delete existing default DID
+          # #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'DELETE' \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/$did" \
+            -H 'accept: */*' \
+            -H "Authorization: Bearer $token")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 202 ]; then
+            echo "DID deleted"
+          elif [ $code -eq 400 ]; then
+            echo "DID could not be deleted"
+            exit 1
+          else
+            echo "Invalid authentication"
+            exit 1
+          fi
+          #################################################
+          # delete from vault unused keys 
+          #################################################
+          echo "delete none used key before creating new one"
+          # get list of keys
+          vault_url='http://{{ template "app.chartname" . }}-vault-server-headless.{{ .Release.Namespace }}.svc.cluster.local:8200'
+          echo "vault url $vault_url"
+          RESPONSEKEY=$(curl -s -w "HTTPSTATUS:%{http_code}" -X 'LIST' \
+          --header "X-Vault-Token: root" \
+          "$vault_url/v1/transit/keys")
+          echo "this is the response of the key $RESPONSEKEY"
+          BODYKEY=$(echo "$RESPONSEKEY" | sed -e 's/HTTPSTATUS:.*//')
+          STATUS_CODE_KEY=$(echo "$RESPONSEKEY" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+          KEYS_NAMES=$(echo "$BODYKEY" | awk -F'"keys":\\[|\\]' '{print $2}')
+          RESULTKEY=$(echo "$KEYS_NAMES" | awk -F',' '
+          {
+            for (i = 1; i <= NF; i++) {
+              gsub(/"| /, "", $i)  # Remove quotes and spaces
+              if ($i != "key1" && $i != "key2" && $i != "key3") {
+                print $i
+              }
+            }
+          }')
+          echo "resulted key $RESULTKEY"
+          length=${#RESULTKEY}
+          echo "key status ID $STATUS_CODE_KEY"
+          if [ $length -gt 2 ]; then
+            echo "resulted key $RESULTKEY"
+          else
+            echo "KEYS NOT created yet"
+            exit 1
+          fi
+          array=$(echo "$RESULTKEY" | tr -d '"' | tr ',' ' ')
+          for item in $array; do
+              echo "$item"
+              updateKeyStatus=$(curl -s -o /dev/null -w "%{http_code}"\
+              --header "X-Vault-Token: root" \
+              --request POST \
+              --data '{"deletion_allowed": true}' \
+              "$vault_url/v1/transit/keys/$item/config")
+              sleep 1
+              DELETEKEY=$(curl -s -w "HTTPSTATUS:%{http_code}" -X 'DELETE' \
+              --header "X-Vault-Token: root" \
+              "$vault_url/v1/transit/keys/$item")
+              DELETEBODY=$(echo "$DELETEKEY" | sed -e 's/HTTPSTATUS:.*//')
+              DELETE_STATUS_CODE=$(echo "$DELETEKEY" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+              echo $DELETE_STATUS_CODE
+              if [ "$DELETE_STATUS_CODE" -eq 204 ]; then
+                echo "$item Deleted"
+              else
+                echo "$item Not deleted"
+              fi
+          done
+          
+          
+
+          #################################################
+          # Create new DID
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'POST' \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/create/web?domain={{ .Values.config.registrationDefaults.did.domain }}&path={{ .Values.config.registrationDefaults.did.path }}&alias={{ .Values.config.registrationDefaults.did.domain }}" \
+            -H 'accept: */*' \
+            -H "Authorization: Bearer $token")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "DID added successfully"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+
+          did=$(echo $body | awk '{gsub(/ /,"",$1); print $1}')
+
+          #################################################
+          # Set new DID as default
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'POST' \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/default?did=$did" \
+            -H 'accept: */*' \
+            -H "Authorization: Bearer $token")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 202 ]; then
+            echo "DID set as default"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+          exit 0
       restartPolicy: Never
   backoffLimit: 4
 {{- end }}
