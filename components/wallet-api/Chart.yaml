@@ -1,6 +1,6 @@
 apiVersion: v2
 appVersion:  v1.0.0
-description: VC Holder API Deployment
+description: VC Wallet API Deployment
 name: wallet-api
 version: 1.0.0
 

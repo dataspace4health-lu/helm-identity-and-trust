@@ -40,11 +40,15 @@ wallet-api:
       persistence:
         enabled: true
         size: 5Gi
+  vault:
+    nameOverride: wallet-api-vault
+    enabled: true
   config:
-    registrationDefaults:
-      did:
-        domain: "dataspace4health.local"
-        path: /wallet/api  
+    init:
+      account:
+        name: "NTT Data"
+        email: "wallet@ntt.com"
+        pass: "xfsc4Ntt!"
     oidc:
       publicBaseUrl: "https://dataspace4health.local/wallet/api"
 
@@ -72,5 +76,148 @@ wallet-api:
         rateLimit:
           bucketSize: 10
           refillRateMinutes: 1
-
-    
+    registrationDefaults:
+      did:
+        domain: "dataspace4health.local"
+        path: "/wallet/api"
+      issuer:
+        name: "ntt-data"
+        description: "NTT Data Issuer"
+        uiEndpoint: "https://dataspace4health.local/portal/credentials?ids="
+        configurationEndpoint: "https://dataspace4health.local/issuer/api/.well-known/openid-credential-issuer"
+  ingress:
+    enabled: true
+    hosts:
+      - paths:
+        - path: /wallet/api
+          port: 8080
+          pathType: Prefix
+    replacePath:
+      regex: /wallet/api(/|$)(.*)
+      replacement: /$2
+    replaceHeader:
+      header: Location
+      regex: (/|^)swagger(.*)
+      replacement: /wallet/api/swagger$2
+    replaceBody:
+      regex: (")?url(")?(\s)?(:) "\/("|api\.json")
+      replacement: url $4 "/wallet/api/$5
+      logLevel: -2
+      monitoring:
+        methods:
+        - GET
+        types:
+        - "*/*"
+        - application/javascript
+        - application/json
+    tls:
+      - secretName: dataspace4health.local
+        hosts:
+          - dataspace4health.local
+issuer-api:
+  nameOverride: issuer-api
+  config:
+    persistance:
+      size: 100Mi
+    wallet:
+      url: "http://waltid-wallet-api.default.svc.cluster.local:8080"
+      account: 
+        email: "wallet@ntt.com"
+        pass: "xfsc4Ntt!"
+    issuer:
+      did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
+      proofType: "LD_PROOF"
+    vault:
+      url: http://waltid-wallet-api-vault-server-headless.default.svc.cluster.local:8200
+      token: root
+    http:
+      host: ""
+      ports:
+        - name: core
+          containerPort: 7000
+        - name: issuer
+          containerPort: 7001
+        - name: wallet
+          containerPort: 7002
+        - name: verifier
+          containerPort: 7003
+        - name: essif
+          containerPort: 7004
+        - name: oidc
+          containerPort: 7010
+      timeout:
+        idle: 120s
+        read: 10s
+        write: 10s
+  ingress:
+    enabled: true
+    hosts:
+      - paths:
+        # - path: /core/api
+        #   port: 7000
+        #   pathType: Prefix
+        - path: /issuer/api
+          port: 7001
+          pathType: Prefix
+        # - path: /wallet/api
+        #   port: 7002
+        #   pathType: Prefix
+        - path: /verifier/api
+          port: 7003
+          pathType: Prefix
+        # - path: /essif/api
+        #   port: 7004
+        #   pathType: Prefix
+        - path: /openid4vc/api
+          port: 7010
+          pathType: Prefix
+    replacePath:
+      regex: /(core|issuer|wallet|verifier|essif|openid4vc)/api(/|$)(.*)
+      replacement: /$3
+    replaceHeader:
+      header: Location
+      regex: (/|^)swagger(.*)
+      replacement: ./api/swagger$2 # /issuer/api/swagger$2
+    replaceBody:
+      regex: (href=|src=|['"]?url['"]?:\s?)(['"])?(\/[^'"]*)(['"])?
+      replacement: $1$2./api$3$4 # $1$2/issuer/api$3$4
+      logLevel: -2
+      monitoring:
+        methods:
+        - GET
+        types:
+        - "*/*"
+        - application/javascript
+        - application/json
+        - text/html
+    tls:
+      - secretName: dataspace4health.local
+        hosts:
+          - dataspace4health.local
+wallet-ui:
+  nameOverride: wallet-ui
+  config:     
+    basePath: /wallet/ui
+    issuer_callback_url: "https://dataspace4health.local/issuer/api"
+    wallet_api_url: "https://dataspace4health.local/wallet/api"
+  ingress:
+    enabled: true
+    hosts:
+      - paths:
+        - path: /wallet/ui
+          port: 8080
+          pathType: Prefix
+    replaceBody:
+      regex: (\/wallet-api\/)([^"]*)
+      replacement: https://dataspace4health.local/wallet/api$1$2
+      logLevel: -2
+      monitoring:
+        methods:
+        - GET
+        types:
+        - "*/*"
+        - text/javascript
+    tls:
+      - secretName: dataspace4health.local
+        hosts:
+          - dataspace4health.local

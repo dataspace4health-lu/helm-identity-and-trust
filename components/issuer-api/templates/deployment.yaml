@@ -38,21 +38,176 @@ spec:
       - name: {{ template "app.chartname" . }}
         image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
-        {{- if and .Values.ingress.tls (gt (len .Values.ingress.tls) 0) }}
         command: 
-          - /bin/sh
+          - /bin/bash
         args:
           - -c
           - |
+            set -x
+            
+            {{- if and .Values.ingress.tls (gt (len .Values.ingress.tls) 0) }}
             for f in /opt/{{ .Values.name }}/certs/*.crt; do 
               echo "Adding certificate $f to keystore"
               certname=$(echo $(basename $f) | sed 's|.crt||g' )
               keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore ${JAVA_HOME}/lib/security/cacerts
             done
+            {{- end }}
+
+            echo "Starting SSIKit" 
+            # JAVA_OPTS="-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG" bin/waltid-ssikit serve -b 0.0.0.0 &
+            /app/bin/waltid-ssikit serve -b 0.0.0.0 #&
+
+            # # give some time for wallet to start and be ready
+            # sleep 40
             
-            echo "Starting VC Issuer API"
-            /waltid-issuer-api/bin/waltid-issuer-api
-          {{- end }}
+            # body=""
+            # code=0
+            
+            # #################################################
+            # # Get DID document
+            # #################################################
+            # response=$(curl -s -w "|%{http_code}" \
+            #   http://{{ .Values.config.issuer.did | replace "did:web:" "" | replace ":" "/" }}/did.json)
+            # body=$(echo $response | awk -F '|' '{print $1}')
+            # code=$(echo $response | awk -F '|' '{print $2}')
+            # if [ $code -eq 200 ]; then
+            #   echo "Got DID document"
+            # else
+            #   echo "Bad Request"
+            #   exit 1
+            # fi
+            
+            # #################################################
+            # # Get Key Id
+            # #################################################
+            # kid=$(echo $body | grep -m1 -oE '"kid":"[^"]+"' | awk -F '":"' '{gsub(/"/,"",$2); print $2}')
+            # if [ -z "$kid" ]; then
+            #   kid=$(echo $body | grep -oE '{{ .Values.config.issuer.did }}#[^"]+' | head -1 | awk -F '#' '{print $2}')
+              
+            #   body1=$(echo $body | awk -F '"publicKeyJwk":\\{' '{print $1}')
+            #   body2=$(echo $body | awk -F '"publicKeyJwk":\\{' '{print $2}')
+
+            #   body=$(printf '%s"publicKeyJwk":{"kid":"%s",%s' $body1 $kid $body2)
+            # fi
+
+            # #################################################
+            # # Save DID document
+            # #################################################
+            # mkdir -p /app/data/did/created
+            # echo $body > /app/data/did/created/{{ .Values.config.issuer.did | replace ":" "%3A" }}
+
+            # #################################################
+            # # Get List of Keys from Vault
+            # #################################################
+            # response=$(curl -s -w "|%{http_code}" -X LIST \
+            #   -H "X-Vault-Token: {{ .Values.config.vault.token }}" \
+            #   "{{ .Values.config.vault.url }}/v1/transit/keys")
+            # body=$(echo $response | awk -F '|' '{print $1}')
+            # code=$(echo $response | awk -F '|' '{print $2}')
+            # if [ $code -eq 200 ]; then
+            #   echo "Got Vault keys"
+            # else
+            #   echo "Bad Request"
+            #   exit 1
+            # fi
+
+            # keys=($(echo $body | grep -m1 -oE '"keys":\[[^\]+\]' | awk -F '"keys":' '{gsub(/\[/,"",$2); gsub(/\]/,"",$2); gsub(/"/,"",$2); gsub(/,/," ",$2); print $2}'))
+            # for keyId in "${keys[@]}"
+            # do
+            #   if [ "$keyId" = "key1" ] || [ "$keyId" = "key2" ] || [ "$keyId" = "key3" ]; then
+            #     continue
+            #   fi
+              
+            #   #################################################
+            #   # Set key as exportable
+            #   #################################################
+            #   response=$(curl -s -w "|%{http_code}" -X POST \
+            #     -H "X-Vault-Token: {{ .Values.config.vault.token }}" \
+            #     -d '{"exportable":true}' \
+            #     "{{ .Values.config.vault.url }}/v1/transit/keys/$keyId/config")
+            #   body=$(echo $response | awk -F '|' '{print $1}')
+            #   code=$(echo $response | awk -F '|' '{print $2}')
+            #   if [ $code -eq 200 ]; then
+            #     echo "Key $keyId set as exportable"
+            #   else
+            #     echo "Bad Request"
+            #     exit 1
+            #   fi
+              
+            #   #################################################
+            #   # Export key
+            #   #################################################
+            #   response=$(curl -s -w "|%{http_code}" -X GET \
+            #     -H "X-Vault-Token: {{ .Values.config.vault.token }}" \
+            #     "{{ .Values.config.vault.url }}/v1/transit/export/signing-key/$keyId/1")
+            #   body=$(echo $response | awk -F '|' '{print $1}')
+            #   code=$(echo $response | awk -F '|' '{print $2}')
+            #   if [ $code -eq 200 ]; then
+            #     echo "Key $keyId exported"
+            #   else
+            #     echo "Bad Request"
+            #     exit 1
+            #   fi
+
+            #   key=$(echo $body | grep -m1 -oE '"1":"[^"]+"' | awk -F '":"' '{gsub(/"/,"",$2); print $2}')
+
+            #   #################################################
+            #   # Extract public and private keys
+            #   #################################################
+            #   echo "$key" | base64 -d > /tmp/combined_key.bin
+            #   # Extract the private key (first 32 bytes)
+            #   dd if=/tmp/combined_key.bin of=/tmp/private_key.bin bs=1 count=32 2>/dev/null
+
+            #   # Extract the public key (last 32 bytes)
+            #   dd if=/tmp/combined_key.bin of=/tmp/public_key.bin bs=1 skip=32 count=32 2>/dev/null
+
+            #   # Encode the extracted keys back to Base64 for readability
+            #   PRIVATE_KEY_BASE64=$(base64 < /tmp/private_key.bin)
+            #   PUBLIC_KEY_BASE64=$(base64 < /tmp/public_key.bin)
+            #   # Clean up binary files
+            #   rm -f /tmp/combined_key.bin /tmp/private_key.bin /tmp/public_key.bin
+
+            #   #################################################
+            #   # Import key
+            #   #################################################
+            #   response=$(curl -s -w "|%{http_code}" -X POST \
+            #     -H 'accept: application/json' \
+            #     -H 'Content-Type: application/json' \
+            #     -d "{
+            #       \"kty\": \"OKP\",
+            #       \"use\": \"sig\",
+            #       \"crv\": \"Ed25519\",
+            #       \"kid\": \"$keyId\",
+            #       \"d\": \"$PRIVATE_KEY_BASE64\",
+            #       \"x\": \"$PUBLIC_KEY_BASE64\",
+            #       \"alg\": \"EdDSA\"
+            #     }" \
+            #     "http://0.0.0.0:7002/keys/import")
+            #   body=$(echo $response | awk -F '|' '{print $1}')
+            #   code=$(echo $response | awk -F '|' '{print $2}')
+            #   if [ $code -eq 200 ]; then
+            #     echo "Key $keyId imported"
+            #   else
+            #     echo "Bad Request"
+            #     exit 1
+            #   fi
+
+            #   #################################################
+            #   # Set key as not exportable
+            #   #################################################
+            #   response=$(curl -s -w "|%{http_code}" -X POST \
+            #     -H "X-Vault-Token: {{ .Values.config.vault.token }}" \
+            #     -d '{"exportable":false}' \
+            #     "{{ .Values.config.vault.url }}/v1/transit/keys/$keyId/config")
+            #   body=$(echo $response | awk -F '|' '{print $1}')
+            #   code=$(echo $response | awk -F '|' '{print $2}')
+            #   if [ $code -eq 200 ]; then
+            #     echo "Key $keyId set as not exportable"
+            #   else
+            #     echo "Bad Request"
+            #     exit 1
+            #   fi
+            # done
         {{- if .Values.useSecretRef }}
         envFrom:
           - secretRef:
@@ -81,21 +236,29 @@ spec:
           - name: monitoring
             containerPort: {{ .Values.metrics.port }}
         {{- end }}
-          - name: http
-            containerPort: {{ .Values.config.http.port }}
+        {{- if .Values.config.ports }}
+{{ toYaml .Values.config.ports | indent 8 }}
+        {{- end }}
         readinessProbe:
           httpGet:
-            path: /livez
-            port: {{ .Values.config.http.port }}
+            path: /health
+            port: 7000
           initialDelaySeconds: 5
           periodSeconds: 5
           successThreshold: 2
           failureThreshold: 2
           timeoutSeconds: 5
         volumeMounts:
-          - name: issuer-web-config
-            mountPath: "/waltid-issuer-api/config/"
+          - name: issuer-api-config
+            mountPath: "/app/config/signatory.conf"
+            subPath: "signatory.conf"
             readOnly: true
+          - mountPath: "/app/data/credential-store"
+            name: data-volume
+          - mountPath: "/app/data/revocation"
+            name: data-volume
+          - mountPath: "/app/data/vc"
+            name: data-volume
           {{ $name := .Values.name }}
           {{- range .Values.ingress.tls }}
           - name: {{ .secretName | replace "." "-" }}
@@ -106,9 +269,15 @@ spec:
         resources:
 {{ toYaml .Values.resources | indent 10 }}
       volumes:
-      - name: issuer-web-config
+      - name: issuer-api-config
         configMap:
+          items:
+            - key: signatory.conf
+              path: signatory.conf
           name: "{{ template "app.chartname" . }}-configmap"
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: {{ template "app.chartname" . }}-data
       {{- range .Values.ingress.tls }}
       - name: {{ .secretName | replace "." "-" }}
         secret:

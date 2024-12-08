@@ -85,6 +85,14 @@ data:
         path: "{{ .Values.config.registrationDefaults.did.path }}/wallet-api/registry/[random-uuid]" // automatically generates random UUID for path
       }
     }
+    defaultIssuerConfig: {
+      did: "did:web:{{ .Values.config.registrationDefaults.did.domain }}{{ .Values.config.registrationDefaults.did.path | replace "/" ":" }}:wallet-api:registry:0",
+      name: {{ .Values.config.registrationDefaults.issuer.name | quote }},
+      description: {{ .Values.config.registrationDefaults.issuer.description | quote }},
+      uiEndpoint: {{ .Values.config.registrationDefaults.issuer.uiEndpoint | quote }},
+      configurationEndpoint: {{ .Values.config.registrationDefaults.issuer.configurationEndpoint | quote }},
+      authorized: false,
+    }
 #  rejectionreason.conf: |
 #    reasons = [
 #        "Unknown sender",

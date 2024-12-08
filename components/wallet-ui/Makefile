@@ -29,6 +29,9 @@ build: $(SUBDIRS) helm/*.tgz
 helm/*.tgz:
 	$(build)
 
+$(SUBDIRS):
+	$(MAKE) -C $@ $(MAKECMDGOALS)
+
 install:
 	helm install $(CURRENT_DIR) helm/*.tgz
 
@@ -39,9 +42,7 @@ uninstall:
 	kubectl delete pod playwright 2> /dev/null || true
 
 	helm uninstall $(CURRENT_DIR) 2> /dev/null || true
-	kubectl delete pvc data-$(CURRENT_DIR)-vault-server-0  2> /dev/null || true
-
-	kubectl delete pvc waltid-issuer-api-data 2> /dev/null || true
+	kubectl delete pvc $(CURRENT_DIR)-data  2> /dev/null || true
 
 clean:
 	rm -rf charts helm

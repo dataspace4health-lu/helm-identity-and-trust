@@ -50,7 +50,7 @@ spec:
               keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore ${JAVA_HOME}/lib/security/cacerts
             done
             
-            echo "Starting VC Holder API"
+            echo "Starting VC Wallet API"
             /waltid-wallet-api/bin/waltid-wallet-api
           {{- end }}
         {{- if .Values.useSecretRef }}

@@ -4,14 +4,11 @@ metadata:
   name: "{{ template "app.chartname" . }}-configmap"
   namespace: {{ .Release.Namespace }}
 data:
-  web.conf: |
-    webHost = "0.0.0.0"
-    webPort = {{ .Values.config.http.port }}
-  issuer-service.conf: |
-    baseUrl = {{ .Values.config.http.host | quote }}
-  authentication-service.conf: |
-    name = {{ .Values.config.authentication.name | quote }}
-    authorizeUrl = {{ .Values.config.authentication.authorizeUrl | quote }}
-    accessTokenUrl = {{ .Values.config.authentication.accessTokenUrl | quote }}
-    clientId = {{ .Values.config.authentication.clientId | quote }}
-    clientSecret = {{ .Values.config.authentication.clientSecret | quote }}
+  signatory.conf: |
+    {
+      "proofConfig": {
+        "issuerDid": {{ .Values.config.issuer.did | quote }},
+        "proofType": {{ .Values.config.issuer.proofType | quote }}
+      },
+      "templatesFolder": "vc-templates-runtime"
+    }

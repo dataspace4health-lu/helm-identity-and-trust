@@ -1,0 +1,208 @@
+{{- if .Values.config.init.account }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "app.chartname" . }}-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/instance: {{ include "app.revision" . }}
+    app.kubernetes.io/part-of: rse
+    {{ include "app.istioLabels" . | nindent 4 }}
+spec:
+  ttlSecondsAfterFinished: 10
+  template:
+    spec:
+      containers:
+      - name: {{ template "app.chartname" . }}-init
+        image: curlimages/curl:latest
+        command: ["sh", "-c"]
+        args:
+        - |
+          set -xe
+
+          # give some time for wallet to start and be ready
+          sleep 10
+          
+          body=""
+          code=0
+          
+          #################################################
+          # Register wallet account
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'POST' \
+            'http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/auth/register' \
+            -H 'accept: */*' \
+            -H 'Content-Type: application/json' \
+            -d '{
+            "name": "{{ .Values.config.init.account.name }}",
+            "email": "{{ .Values.config.init.account.email }}",
+            "password": "{{ .Values.config.init.account.pass }}",
+            "type": "email"
+            }')
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 201 ]; then
+            echo "Successfully registered wallet!"
+          elif [ $code -eq 409 ]; then
+            echo "Account already exists!"
+          else
+            echo "Failed to register wallet. Response: $code"
+            exit 1
+          fi
+
+          #################################################
+          # Login user
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'POST' \
+            'http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/auth/login' \
+            -H 'accept: */*' \
+            -H 'Content-Type: application/json' \
+            -d '{
+            "email": "{{ .Values.config.init.account.email }}",
+            "password": "{{ .Values.config.init.account.pass }}",
+            "type": "email"
+            }')
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Login successful"
+          else
+            echo "Login failed"
+            exit 1
+          fi
+
+          token=$(echo $body | grep -oE '"token":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
+
+          #################################################
+          # Retrieve wallet
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'GET' \
+            'http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/accounts/wallets' \
+            -H 'accept: application/json' \
+            -H "Authorization: Bearer $token" \
+            )
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Wallets loaded successfully"
+          else
+            echo "Invalid authentication"
+            exit 1
+          fi
+
+          walletId=$(echo $body | grep -m1 -oE '"id":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
+          #################################################
+          # Get existing default DID
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'GET' \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids" \
+            -H 'accept: application/json' \
+            -H "Authorization: Bearer $token")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Got list of DIDs"
+          else
+            echo "Invalid authentication"
+            exit 1
+          fi
+
+          did=$(echo $body | grep -m1 -oE '"did":"[^"]+"' | awk -F '":"' '{gsub(/"/,"",$2); print $2}')
+
+          #################################################
+          # Delete existing default DID
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'DELETE' \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/$did" \
+            -H 'accept: */*' \
+            -H "Authorization: Bearer $token")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 202 ]; then
+            echo "DID deleted"
+          elif [ $code -eq 400 ]; then
+            echo "DID could not be deleted"
+            exit 1
+          else
+            echo "Invalid authentication"
+            exit 1
+          fi
+
+          #################################################
+          # Generate new key
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'POST' \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/keys/generate" \
+            -H 'accept: application/json' \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer $token" \
+            -d '{
+              "backend": "tse",
+              "keyType": "Ed25519",
+              "config": {
+                "server": "http://{{ include "app.chartname" . }}-vault-server-headless.{{ .Release.Namespace }}.svc.cluster.local:8200/v1/transit",
+                "auth": {
+                  {{- range $index, $element := .Values.vault.server.args }}
+                  {{- if $element | regexMatch "-dev-root-token-id=.*" }}
+                    {{- $token := $element | regexFind "-dev-root-token-id=(.*)" }}
+                    {{- $token := regexReplaceAll "-dev-root-token-id=(.*)" $token "$1" }} 
+                  "accessKey": {{ $token | quote }}
+                  {{- end }}
+                  {{- end }}
+                }
+              }
+            }')
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 201 ]; then
+            echo "Key generated"
+          else
+            echo "Invalid authentication"
+            exit 1
+          fi
+
+          keyId=$body
+
+          #################################################
+          # Create new DID
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'POST' \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/create/web?keyId=$keyId&domain={{ .Values.config.registrationDefaults.did.domain }}&path={{ if .Values.config.registrationDefaults.did.path }}{{ .Values.config.registrationDefaults.did.path }}/wallet-api/registry/0{{ end }}&alias={{ .Values.config.registrationDefaults.did.domain }}" \
+            -H 'accept: */*' \
+            -H "Authorization: Bearer $token")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "DID added successfully"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+
+          did=$(echo $body | awk '{gsub(/ /,"",$1); print $1}')
+
+          #################################################
+          # Set new DID as default
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X 'POST' \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/default?did=$did" \
+            -H 'accept: */*' \
+            -H "Authorization: Bearer $token")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 202 ]; then
+            echo "DID set as default"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+
+          exit 0
+      restartPolicy: Never
+  backoffLimit: 4
+{{- end }}
+
+
+
+
