@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ template "app.chartname" . }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/instance: {{ include "app.revision" . }}
+    app.kubernetes.io/part-of: rse
+    {{ include "app.istioLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "app.labels" . | nindent 8 }}
+      annotations:
+        {{- include "app.metricsAnnotations" . | nindent 8 }}
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+    spec:
+      securityContext:
+{{- include "app.securitycontext" . | nindent 8 }}
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecrets }}
+      {{- end }}
+      containers:
+      - name: {{ template "app.chartname" . }}
+        image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        {{- if .Values.useSecretRef }}
+        envFrom:
+          - secretRef:
+            name: {{ .Values.secretRefName }}
+        {{- else if .Values.useConfigMap }}
+        envFrom:
+          - configMapRef:
+              name: {{ .Values.configMapName }}
+        {{- else }}
+        env:
+          - name: PORT
+            value: {{ .Values.config.http.port | quote }}
+          - name: NUXT_APP_BASE_URL
+            value: {{ default "/" .Values.config.basePath | quote }}
+          - name: NUXT_PUBLIC_ISSUER_CALLBACK_URL
+            value: {{ .Values.config.issuer_callback_url | quote }}
+          - name: NUXT_PUBLIC_DEMO_WALLET_URL
+            value: ""
+          - name: NUXT_PUBLIC_AUTH_COMPUTED_PATHNAME
+            value: "{{ .Values.config.wallet_api_url }}/wallet-api/auth"
+          - name: NUXT_PUBLIC_AUTH_COMPUTED_FULL_BASE_URL
+            value: "{{ .Values.config.wallet_api_url }}/wallet-api/auth"
+          - name: NUXT_PUBLIC_AUTH_BASE_URL
+            value: "{{ .Values.config.wallet_api_url }}/wallet-api/auth"
+          # - name: NUXT_APP_BUILD_ASSETS_DIR
+          #   value: /wallet/ui/_nuxt/ # {{ default "/" .Values.config.basePath | quote }}
+          # - name: NUXT_APP_CDN_URL
+          #   value: /wallet/ui/ # {{ default "/" .Values.config.basePath | quote }}
+          # - name: NUXT_PUBLIC_CREDENTIAL_REPOSITORY_URL
+          #   value: {{ .Values.config.issuer_callback_url | quote }}
+        {{- end }}
+        {{- if .Values.secretEnv }}
+          {{- range $key, $value := .Values.secretEnv }}
+          - name: "{{ $key }}"
+            valueFrom:
+              secretRef:
+                name: "{{ $value.name }}"
+          {{- end }}
+        {{- end }}
+{{- if .Values.extraVars }}
+{{ toYaml .Values.extraVars | indent 8 }}
+{{- end }}
+        ports:
+        {{- if .Values.metrics.enabled }}
+          - name: monitoring
+            containerPort: {{ .Values.metrics.port }}
+        {{- end }}
+          - name: http
+            containerPort: {{ .Values.config.http.port }}   
+        readinessProbe:
+          httpGet:
+            path: {{ default "/" .Values.config.basePath | quote }} 
+            port: {{ .Values.config.http.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 2
+          failureThreshold: 2
+          timeoutSeconds: 5
+        volumeMounts:
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+      volumes:

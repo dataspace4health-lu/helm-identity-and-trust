@@ -1,0 +1,272 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "app.chartname" . }}-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/instance: {{ include "app.revision" . }}
+    app.kubernetes.io/part-of: rse
+    {{ include "app.istioLabels" . | nindent 4 }}
+spec:
+  ttlSecondsAfterFinished: 10
+  template:
+    spec:
+      containers:
+      - name: {{ template "app.chartname" . }}-init
+        image: curlimages/curl:latest
+        command: ["sh", "-c"]
+        args:
+        - |
+          set -xe
+
+          # give some time for wallet to start and be ready
+          sleep 40
+          
+          body=""
+          code=0
+          
+          #################################################
+          # Get DID document
+          #################################################
+          response=$(curl -s -w "|%{http_code}" \
+            http://{{ .Values.config.issuer.did | replace "did:web:" "" | replace ":" "/" }}/did.json)
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Got DID document"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+          
+          #################################################
+          # Get Key Id
+          #################################################
+          kid=$(echo $body | grep -m1 -oE '"kid":"[^"]+"' | awk -F '":"' '{gsub(/"/,"",$2); print $2}')
+          if [ -z "$kid" ]; then
+            kid=$(echo $body | grep -oE '{{ .Values.config.issuer.did }}#[^"]+' | head -1 | awk -F '#' '{print $2}')
+          fi
+
+          #################################################
+          # Login user in Wallet
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X POST \
+            '{{ .Values.config.wallet.url }}/wallet-api/auth/login' \
+            -H 'accept: */*' \
+            -H 'Content-Type: application/json' \
+            -d '{
+            "email": "{{ .Values.config.wallet.account.email }}",
+            "password": "{{ .Values.config.wallet.account.pass }}",
+            "type": "email"
+            }')
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Login successful"
+          else
+            echo "Login failed"
+            exit 1
+          fi
+
+          token=$(echo $body | grep -oE '"token":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
+
+          #################################################
+          # Retrieve wallet
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X GET \
+            '{{ .Values.config.wallet.url }}/wallet-api/wallet/accounts/wallets' \
+            -H 'accept: application/json' \
+            -H "Authorization: Bearer $token" \
+            )
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Wallets loaded successfully"
+          else
+            echo "Invalid authentication"
+            exit 1
+          fi
+
+          walletId=$(echo $body | grep -m1 -oE '"id":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
+          
+          #################################################
+          # Get Key
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X GET \
+            "{{ .Values.config.wallet.url }}/wallet-api/wallet/$walletId/keys/$kid/export?format=JWK&loadPrivateKey=false" \
+            -H 'accept: */*' \
+            -H "Authorization: Bearer $token" \
+            )
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Key loaded successfully"
+          else
+            echo "Invalid authentication"
+            exit 1
+          fi
+
+          kid_jwk=$body
+          kid_pub=$(echo $body | grep -m1 -oE '"x":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
+          # Format public key as expected by ssikit
+          kid_pub="$(echo $kid_pub | awk '{gsub(/_/,"/",$1); gsub(/-/,"+",$1); print $1}')="
+
+          #################################################
+          # Get List of Keys from Vault
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X LIST \
+            -H "X-Vault-Token: {{ .Values.config.vault.token }}" \
+            "{{ .Values.config.vault.url }}/v1/transit/keys")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Got Vault keys"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+
+          keys=$(echo $body | grep -m1 -oE '"keys":\[[^\]+\]' | awk -F '"keys":' '{gsub(/\[/,"",$2); gsub(/\]/,"",$2); gsub(/"/,"",$2); print $2}')
+          
+          for keyId in $(echo $keys | sed "s/,/ /g")
+          do
+            #################################################
+            # Get Public Key
+            #################################################
+            response=$(curl -s -w "|%{http_code}" -X POST \
+              -H "X-Vault-Token: {{ .Values.config.vault.token }}" \
+              -d '{"exportable":false}' \
+              "{{ .Values.config.vault.url }}/v1/transit/keys/$keyId/config")
+            body=$(echo $response | awk -F '|' '{print $1}')
+            code=$(echo $response | awk -F '|' '{print $2}')
+            if [ $code -eq 200 ]; then
+              echo "Get Public Key for key $keyId"
+            else
+              echo "Bad Request"
+              exit 1
+            fi
+
+            pub_key=$(echo $body | grep -m1 -oE '"public_key":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
+            
+            if [ "$kid_pub" != "$pub_key" ]; then
+              continue
+            fi
+
+            #################################################
+            # Set key as exportable
+            #################################################
+            response=$(curl -s -w "|%{http_code}" -X POST \
+              -H "X-Vault-Token: {{ .Values.config.vault.token }}" \
+              -d '{"exportable":true}' \
+              "{{ .Values.config.vault.url }}/v1/transit/keys/$keyId/config")
+            body=$(echo $response | awk -F '|' '{print $1}')
+            code=$(echo $response | awk -F '|' '{print $2}')
+            if [ $code -eq 200 ]; then
+              echo "Key $keyId set as exportable"
+            else
+              echo "Bad Request"
+              exit 1
+            fi
+
+            #################################################
+            # Export key
+            #################################################
+            response=$(curl -s -w "|%{http_code}" -X GET \
+              -H "X-Vault-Token: {{ .Values.config.vault.token }}" \
+              "{{ .Values.config.vault.url }}/v1/transit/export/signing-key/$keyId/1")
+            body=$(echo $response | awk -F '|' '{print $1}')
+            code=$(echo $response | awk -F '|' '{print $2}')
+            if [ $code -eq 200 ]; then
+              echo "Key $keyId exported"
+            else
+              echo "Bad Request"
+              exit 1
+            fi
+
+            key=$(echo $body | grep -m1 -oE '"1":"[^"]+"' | awk -F '":"' '{gsub(/"/,"",$2); print $2}')
+
+            #################################################
+            # Extract public and private keys
+            #################################################
+            echo "$key" | base64 -d > /tmp/combined_key.bin
+            # Extract the private key (first 32 bytes)
+            dd if=/tmp/combined_key.bin of=/tmp/private_key.bin bs=1 count=32 2>/dev/null
+
+            # Extract the public key (last 32 bytes)
+            dd if=/tmp/combined_key.bin of=/tmp/public_key.bin bs=1 skip=32 count=32 2>/dev/null
+
+            # Encode the extracted keys back to Base64 for readability
+            PRIVATE_KEY_BASE64=$(base64 < /tmp/private_key.bin)
+            PUBLIC_KEY_BASE64=$(base64 < /tmp/public_key.bin)
+            # Clean up binary files
+            rm -f /tmp/combined_key.bin /tmp/private_key.bin /tmp/public_key.bin
+
+            #################################################
+            # Import key
+            #################################################
+            response=$(curl -s -w "|%{http_code}" -X POST \
+              -H 'accept: application/json' \
+              -H 'Content-Type: text/plain' \
+              -d "{
+                \"kty\": \"OKP\",
+                \"use\": \"sig\",
+                \"crv\": \"Ed25519\",
+                \"kid\": \"$kid\",
+                \"d\": \"$PRIVATE_KEY_BASE64\",
+                \"x\": \"$PUBLIC_KEY_BASE64\",
+                \"alg\": \"EdDSA\"
+              }" \
+              "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:7002/keys/import")
+            body=$(echo $response | awk -F '|' '{print $1}')
+            code=$(echo $response | awk -F '|' '{print $2}')
+            if [ $code -eq 200 ]; then
+              echo "Key $keyId imported"
+            else
+              echo "Bad Request"
+              exit 1
+            fi
+
+            #################################################
+            # Set key as not exportable
+            #################################################
+            response=$(curl -s -w "|%{http_code}" -X POST \
+              -H "X-Vault-Token: {{ .Values.config.vault.token }}" \
+              -d '{"exportable":false}' \
+              "{{ .Values.config.vault.url }}/v1/transit/keys/$keyId/config")
+            body=$(echo $response | awk -F '|' '{print $1}')
+            code=$(echo $response | awk -F '|' '{print $2}')
+            if [ $code -eq 200 ]; then
+              echo "Key $keyId set as not exportable"
+            else
+              echo "Bad Request"
+              exit 1
+            fi
+
+            break
+          done
+
+          #################################################
+          # Import DID document
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X POST \
+            -H 'accept: application/json' \
+            -H 'Content-Type: text/plain' \
+            -d '{{ .Values.config.issuer.did }}' \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:7002/did/import?keyId=$kid")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 201 ]; then
+            echo "DID document imported"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+
+          exit 0
+      restartPolicy: Never
+  backoffLimit: 4
+
+
+
+

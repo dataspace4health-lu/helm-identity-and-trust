@@ -97,9 +97,9 @@ vault:
 config:
   init:
     account:
-      name: "Ntt Data"
+      name: "NTT Data"
       email: "wallet@ntt.com"
-      pass: "xfsc4Ntt!"      
+      pass: "xfsc4Ntt!"
   http:
     host: ""
     port: 8080
@@ -131,7 +131,7 @@ config:
     authorizeUrl: "${oidcRealm}/protocol/openid-connect/auth"
     accessTokenUrl: "${oidcRealm}/protocol/openid-connect/token"
     logoutUrl: "${oidcRealm}/protocol/openid-connect/logout"
-    clientId: "wallet_backend_prod"
+    clientId: "waltid_backend"
     clientSecret: "__DEFAULT_KEYCLOAK_CLIENT_SECRET__"
     keycloakUserApi: "https://keycloak.walt-test.cloud/admin/realms/ds4h/users"
     jwksCache:
@@ -156,13 +156,12 @@ config:
       accessKey: null
     did:
       domain: "dataspace4health.local"
-      path: "/wallet/api/wallet-api/registry/ntt"
+      path: "/wallet/api"
     issuer:
       name: "ntt-data"
       description: "NTT Data Issuer"
       uiEndpoint: "https://dataspace4health.local/portal/credentials?ids="
       configurationEndpoint: "https://dataspace4health.local/issuer/api/.well-known/openid-credential-issuer"
-
 
 ingress:
   enabled: true

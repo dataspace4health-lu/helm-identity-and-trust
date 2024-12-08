@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ template "app.chartname" . }}-wallet-account-init
+  name: {{ template "app.chartname" . }}-init
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "app.labels" . | nindent 4 }}
@@ -14,7 +14,7 @@ spec:
   template:
     spec:
       containers:
-      - name: {{ template "app.chartname" . }}-wallet-account-init
+      - name: {{ template "app.chartname" . }}-init
         image: curlimages/curl:latest
         command: ["sh", "-c"]
         args:
@@ -22,7 +22,7 @@ spec:
           set -xe
 
           # give some time for wallet to start and be ready
-          sleep 60
+          sleep 10
           
           body=""
           code=0
@@ -109,9 +109,10 @@ spec:
           fi
 
           did=$(echo $body | grep -m1 -oE '"did":"[^"]+"' | awk -F '":"' '{gsub(/"/,"",$2); print $2}')
-          # #################################################
-          # # Delete existing default DID
-          # #################################################
+
+          #################################################
+          # Delete existing default DID
+          #################################################
           response=$(curl -s -w "|%{http_code}" -X 'DELETE' \
             "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/$did" \
             -H 'accept: */*' \
@@ -127,67 +128,47 @@ spec:
             echo "Invalid authentication"
             exit 1
           fi
+
           #################################################
-          # delete from vault unused keys 
+          # Generate new key
           #################################################
-          echo "delete none used key before creating new one"
-          # get list of keys
-          vault_url='http://{{ template "app.chartname" . }}-vault-server-headless.{{ .Release.Namespace }}.svc.cluster.local:8200'
-          echo "vault url $vault_url"
-          RESPONSEKEY=$(curl -s -w "HTTPSTATUS:%{http_code}" -X 'LIST' \
-          --header "X-Vault-Token: root" \
-          "$vault_url/v1/transit/keys")
-          echo "this is the response of the key $RESPONSEKEY"
-          BODYKEY=$(echo "$RESPONSEKEY" | sed -e 's/HTTPSTATUS:.*//')
-          STATUS_CODE_KEY=$(echo "$RESPONSEKEY" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
-          KEYS_NAMES=$(echo "$BODYKEY" | awk -F'"keys":\\[|\\]' '{print $2}')
-          RESULTKEY=$(echo "$KEYS_NAMES" | awk -F',' '
-          {
-            for (i = 1; i <= NF; i++) {
-              gsub(/"| /, "", $i)  # Remove quotes and spaces
-              if ($i != "key1" && $i != "key2" && $i != "key3") {
-                print $i
+          response=$(curl -s -w "|%{http_code}" -X 'POST' \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/keys/generate" \
+            -H 'accept: application/json' \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer $token" \
+            -d '{
+              "backend": "tse",
+              "keyType": "Ed25519",
+              "config": {
+                "server": "http://{{ include "app.chartname" . }}-vault-server-headless.{{ .Release.Namespace }}.svc.cluster.local:8200/v1/transit",
+                "auth": {
+                  {{- range $index, $element := .Values.vault.server.args }}
+                  {{- if $element | regexMatch "-dev-root-token-id=.*" }}
+                    {{- $token := $element | regexFind "-dev-root-token-id=(.*)" }}
+                    {{- $token := regexReplaceAll "-dev-root-token-id=(.*)" $token "$1" }} 
+                  "accessKey": {{ $token | quote }}
+                  {{- end }}
+                  {{- end }}
+                }
               }
-            }
-          }')
-          echo "resulted key $RESULTKEY"
-          length=${#RESULTKEY}
-          echo "key status ID $STATUS_CODE_KEY"
-          if [ $length -gt 2 ]; then
-            echo "resulted key $RESULTKEY"
+            }')
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 201 ]; then
+            echo "Key generated"
           else
-            echo "KEYS NOT created yet"
+            echo "Invalid authentication"
             exit 1
           fi
-          array=$(echo "$RESULTKEY" | tr -d '"' | tr ',' ' ')
-          for item in $array; do
-              echo "$item"
-              updateKeyStatus=$(curl -s -o /dev/null -w "%{http_code}"\
-              --header "X-Vault-Token: root" \
-              --request POST \
-              --data '{"deletion_allowed": true}' \
-              "$vault_url/v1/transit/keys/$item/config")
-              sleep 1
-              DELETEKEY=$(curl -s -w "HTTPSTATUS:%{http_code}" -X 'DELETE' \
-              --header "X-Vault-Token: root" \
-              "$vault_url/v1/transit/keys/$item")
-              DELETEBODY=$(echo "$DELETEKEY" | sed -e 's/HTTPSTATUS:.*//')
-              DELETE_STATUS_CODE=$(echo "$DELETEKEY" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
-              echo $DELETE_STATUS_CODE
-              if [ "$DELETE_STATUS_CODE" -eq 204 ]; then
-                echo "$item Deleted"
-              else
-                echo "$item Not deleted"
-              fi
-          done
-          
-          
+
+          keyId=$body
 
           #################################################
           # Create new DID
           #################################################
           response=$(curl -s -w "|%{http_code}" -X 'POST' \
-            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/create/web?domain={{ .Values.config.registrationDefaults.did.domain }}&path={{ .Values.config.registrationDefaults.did.path }}&alias={{ .Values.config.registrationDefaults.did.domain }}" \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/create/web?keyId=$keyId&domain={{ .Values.config.registrationDefaults.did.domain }}&path={{ if .Values.config.registrationDefaults.did.path }}{{ .Values.config.registrationDefaults.did.path }}/wallet-api/registry/0{{ end }}&alias={{ .Values.config.registrationDefaults.did.domain }}" \
             -H 'accept: */*' \
             -H "Authorization: Bearer $token")
           body=$(echo $response | awk -F '|' '{print $1}')
@@ -216,6 +197,7 @@ spec:
             echo "Bad Request"
             exit 1
           fi
+
           exit 0
       restartPolicy: Never
   backoffLimit: 4

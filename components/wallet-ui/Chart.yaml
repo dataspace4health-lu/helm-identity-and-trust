@@ -1,0 +1,7 @@
+apiVersion: v2
+appVersion:  v1.0.0
+description: VC Wallet UI Deployment
+name: wallet-ui
+version: 1.0.0
+
+dependencies:
