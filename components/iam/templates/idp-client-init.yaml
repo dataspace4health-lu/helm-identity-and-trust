@@ -1,0 +1,146 @@
+{{- if gt (len .Values.idpClients) 0 }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "app.chartname" . }}-idp-client-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/instance: {{ include "app.revision" . }}
+    app.kubernetes.io/part-of: rse
+    {{ include "app.istioLabels" . | nindent 4 }}
+spec:
+  ttlSecondsAfterFinished: 10
+  template:
+    spec:
+      containers:
+      - name: {{ template "app.chartname" . }}-init
+        image: curlimages/curl:latest
+        command: ["sh", "-c"]
+        args:
+        - |
+          set -xe
+
+          wait-for-url() {
+            echo "Testing $1"
+            timeout -s TERM 200 sh -c \
+            'while [[ "$(curl -k -s -o /dev/null -L -w ''%{http_code}'' ${0})" != "200" ]];\
+            do echo "Waiting for ${0}" && sleep 20;\
+            done' ${1}
+            echo "OK!"
+          }
+
+          #################################################
+          # Wait Keycloak to be up and running
+          #################################################
+          keycloak_url=http://{{ template "app.chartname" . }}-keycloak{{ .Values.keycloak.httpRelativePath }}
+          wait-for-url ${keycloak_url}realms/master
+          
+          {{- range .Values.idpClients }}
+          #################################################
+          # Get Keycloak token
+          #################################################
+          response=$(curl -k -s -w "|%{http_code}" -X POST \
+            -H 'Content-Type: application/x-www-form-urlencoded' \
+            -d "grant_type=password" \
+            -d "username={{ $.Values.keycloak.auth.adminUser }}" \
+            -d "password={{ $.Values.keycloak.auth.adminPassword }}" \
+            -d "client_id=admin-cli" \
+            -d "client_secret=" \
+            "${keycloak_url}realms/{{ .realm }}/protocol/openid-connect/token")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Got Keycloak token"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+
+          access_token=$(echo $body | grep -m1 -oE '"access_token":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
+
+          #################################################
+          # Register client {{ .idpClientName }}
+          #################################################
+          response=$(curl -k -s -w "|%{http_code}" -X POST \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"client_name\": \"{{ .idpClientName }}\",
+              \"redirect_uris\": [ \"{{ .idpRedirectUri }}\" ],
+              \"all_redirect_uris\": false
+            }" \
+            "{{ .idpClientRegisterUrl }}")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 201 ]; then
+            echo "Client {{ .idpClientName }} registered"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+
+          client_id=$(echo $body | grep -m1 -oE '"client_id": "[^"]+"' | awk -F ': ' '{gsub(/"/,"",$2); print $2}')
+          client_secret=$(echo $body | grep -m1 -oE '"client_secret": "[^"]+"' | awk -F ': ' '{gsub(/"/,"",$2); print $2}')
+
+          #################################################
+          # Get idp {{ .alias }} metadata
+          #################################################
+          response=$(curl -k -s -w "|%{http_code}" -X GET \
+            -H 'Content-Type: application/json' \
+            "{{ .idpOidcDiscoveryUrl }}")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Got idp {{ .alias }} metadata"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+
+          authorization_url=$(echo $body | grep -m1 -oE '"authorization_endpoint": "[^"]+"' | awk -F ': ' '{gsub(/"/,"",$2); print $2}')
+          token_url=$(echo $body | grep -m1 -oE '"token_endpoint": "[^"]+"' | awk -F ': ' '{gsub(/"/,"",$2); print $2}')
+          user_info_url=$(echo $body | grep -m1 -oE '"userinfo_endpoint": "[^"]+"' | awk -F ': ' '{gsub(/"/,"",$2); print $2}')
+          issuer=$(echo $body | grep -m1 -oE '"issuer": "[^"]+"' | awk -F ': ' '{gsub(/"/,"",$2); print $2}')
+          jwks_url=$(echo $body | grep -m1 -oE '"jwks_uri": "[^"]+"' | awk -F ': ' '{gsub(/"/,"",$2); print $2}')
+          
+          #################################################
+          # Register idp {{ .alias }} in Keycloak
+          #################################################
+          response=$(curl -k -s -w "|%{http_code}" -X POST \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer $access_token" \
+            -d "{
+              \"providerId\": \"oidc\",
+              \"alias\": \"{{ .alias }}\",
+              \"displayName\": \"{{ .displayName }}\",
+              \"config\": {
+                \"authorizationUrl\": \"${authorization_url}\",
+                \"tokenUrl\": \"${token_url}\",
+                \"userInfoUrl\": \"${user_info_url}\",
+                \"issuer\": \"${issuer}\",
+                \"jwksUrl\": \"${jwks_url}\",
+                \"clientAuthMethod\": \"client_secret_basic\",
+                \"clientId\": \"${client_id}\",
+                \"clientSecret\": \"${client_secret}\",
+                \"defaultScope\": \"openid profile\"
+              }
+            }" \
+            "${keycloak_url}admin/realms/{{ .realm }}/identity-provider/instances")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 201 ]; then
+            echo "IDP {{ .alias }} registered"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+          {{- end }}
+
+          exit 0
+      restartPolicy: Never
+  backoffLimit: 4
+  {{- end }}
+
+
+
+

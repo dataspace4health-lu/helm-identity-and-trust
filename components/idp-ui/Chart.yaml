@@ -1,0 +1,7 @@
+apiVersion: v2
+appVersion:  v1.0.0
+description: VC IDP UI Deployment
+name: idp-ui
+version: 1.0.0
+
+dependencies:

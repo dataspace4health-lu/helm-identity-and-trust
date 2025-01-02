@@ -1,0 +1,9 @@
+{{- if .Values.extraConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "app.chartname" . }}-extra-configmap"
+  namespace: {{ .Release.Namespace }}
+data:
+{{ .Values.extraConfigMap | indent 3 }}
+{{- end }}

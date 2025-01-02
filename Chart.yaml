@@ -1,5 +1,5 @@
 apiVersion: v2
-name: wallet
+name: waltid-ssikit
 description: A Helm chart for deploying the Identity and Trust.
 type: application
 
@@ -18,6 +18,12 @@ dependencies:
   - name: iam
     version: 1.0.0
     repository: "file://components/iam"
+  - name: idp-api
+    version: 1.0.0
+    repository: "file://components/idp-api"
+  - name: idp-ui
+    version: 1.0.0
+    repository: "file://components/idp-ui"
   - name: wallet-api
     version: 1.0.0
     repository: "file://components/wallet-api"

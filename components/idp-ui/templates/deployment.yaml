@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ template "app.chartname" . }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/instance: {{ include "app.revision" . }}
+    app.kubernetes.io/part-of: rse
+    {{ include "app.istioLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "app.labels" . | nindent 8 }}
+      annotations:
+        {{- include "app.metricsAnnotations" . | nindent 8 }}
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+    spec:
+      securityContext:
+{{- include "app.securitycontext" . | nindent 8 }}
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecrets }}
+      {{- end }}
+      containers:
+      - name: {{ template "app.chartname" . }}
+        image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        command: 
+          - /bin/bash
+        args:
+          - -c
+          - |
+            sed -i 's|listen 80;|listen {{ .Values.config.http.port }};|g' /etc/nginx/nginx.conf
+            
+            find /usr/share/nginx/html -type f -name "index.html" -exec sed -i 's|/favicon|{{ .Values.config.basePath }}/favicon|g' {} +
+            find /usr/share/nginx/html -type f -name "index.html" -exec sed -i 's|/_nuxt|{{ .Values.config.basePath }}/_nuxt|g' {} +
+            find /usr/share/nginx/html -type f -name "index.html" -exec sed -i 's|basePath:"/"|basePath:"{{ .Values.config.basePath }}/"|g' {} +
+
+            find /usr/share/nginx/html -type f -name "*.js" -exec sed -i 's|"/api/swagger|"{{ .Values.config.basePath }}/api/swagger|g' {} +
+            find /usr/share/nginx/html -type f -name "*.js" -exec sed -i 's|"/api/|"{{ .Values.config.apiUrl }}/api/|g' {} +
+            find /usr/share/nginx/html -type f -name "*.js" -exec sed -i 's|/verifier-api/|{{ .Values.config.verifierApiUrl }}/|g' {} +
+            find /usr/share/nginx/html -type f -name "*.js" -exec sed -i 's|/webjars/|{{ .Values.config.apiUrl }}/|g' {} +
+
+            nginx -g "daemon off;"
+        {{- if .Values.useSecretRef }}
+        envFrom:
+          - secretRef:
+            name: {{ .Values.secretRefName }}
+        {{- else if .Values.useConfigMap }}
+        envFrom:
+          - configMapRef:
+              name: {{ .Values.configMapName }}
+        {{- else }}
+        env:
+        - name: VERIFIER_ADDRESS
+          value: {{ .Values.config.verifierUrl | quote }}
+        - name: API_ADDRESS
+          value: {{ .Values.config.apiUrl | quote }}
+        {{- end }}
+        {{- if .Values.secretEnv }}
+          {{- range $key, $value := .Values.secretEnv }}
+          - name: "{{ $key }}"
+            valueFrom:
+              secretRef:
+                name: "{{ $value.name }}"
+          {{- end }}
+        {{- end }}
+{{- if .Values.extraVars }}
+{{ toYaml .Values.extraVars | indent 8 }}
+{{- end }}
+        ports:
+        {{- if .Values.metrics.enabled }}
+          - name: monitoring
+            containerPort: {{ .Values.metrics.port }}
+        {{- end }}
+          - name: http
+            containerPort: {{ .Values.config.http.port }}   
+        # readinessProbe:
+        #   httpGet:
+        #     path: /livez
+        #     port: {{ .Values.config.http.port }}
+        #   initialDelaySeconds: 5
+        #   periodSeconds: 5
+        #   successThreshold: 2
+        #   failureThreshold: 2
+        #   timeoutSeconds: 5
+        volumeMounts:
+          {{ $name := .Values.name }}
+          {{- range .Values.ingress.tls }}
+          - name: {{ .secretName | replace "." "-" }}
+            mountPath: /etc/ssl/certs/{{ .secretName }}.crt
+            subPath: {{ .secretName }}.crt
+            readOnly: true
+          {{- end }}
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+      volumes:
+      {{- range .Values.ingress.tls }}
+      - name: {{ .secretName | replace "." "-" }}
+        secret:
+          secretName: {{ .secretName }}
+          items:
+            - key: ca.crt
+              path: {{ .secretName }}.crt
+          defaultMode: 420
+      {{ end }}

@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "app.chartname" . }}-configmap"
+  namespace: {{ .Release.Namespace }}
+data:
+  # OIDC Manager configuration #      "keyId": "715b3ebf65074f1183a48c4b7c8e311c",
+  idp-config.json: |
+    {
+      "externalUrl": {{ .Values.config.externalUrl | quote }},
+      "openClientRegistration": true,
+      "fallbackAuthorizationMode": "SIOP",
+      "claimConfig": {
+        "vc_mappings": [
+          {
+            "scope": [ "profile" ],
+            "claim": "name",
+            "credentialType": "VerifiableId",
+            "valuePath": "$.credentialSubject.firstName $.credentialSubject.familyName"
+          },
+          {
+            "scope": [ "profile" ],
+            "claim": "family_name",
+            "credentialType": "VerifiableId",
+            "valuePath": "$.credentialSubject.familyName"
+          },
+          {
+            "scope": [ "profile" ],
+            "claim": "given_name",
+            "credentialType": "VerifiableId",
+            "valuePath": "$.credentialSubject.firstName"
+          },
+          {
+            "scope": [ "profile" ],
+            "claim": "gender",
+            "credentialType": "VerifiableId",
+            "valuePath": "$.credentialSubject.gender"
+          },
+          {
+            "scope": [ "profile" ],
+            "claim": "birthdate",
+            "credentialType": "VerifiableId",
+            "valuePath": "$.credentialSubject.dateOfBirth"
+          },
+          {
+            "scope": [ "address" ],
+            "claim": "address",
+            "credentialType": "VerifiableId",
+            "valuePath": "$.credentialSubject.currentAddress[0]"
+          }
+        ],
+        "default_vp_token_claim": {
+          "presentation_definition": {
+            "id": "1",
+            "input_descriptors": [
+              {
+                "id": "1",
+                "constraints": {
+                  "fields": [
+                    {
+                      "id": "1",
+                      "path": [ "$.type" ],
+                      "filter": { "const":  "VerifiableId" }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  # SIOP Manager configuration (SIOP derived from the Verifer Manager)
+  verifier-config.json: |
+    {
+      "verifierUiUrl": "{{ .Values.config.verifierUiUrl }}",
+      "verifierApiUrl": "{{ .Values.config.verifierApiUrl }}",
+      "additionalPolicies": [
+      ],
+      "wallets": {
+        "walt.id": {
+          "id": "walt.id",
+          "url": "{{ .Values.config.walletUrl }}",
+          "presentPath": "api/siop/initiatePresentation/",
+          "receivePath" : "api/siop/initiateIssuance/",
+          "description": "walt.id web wallet"
+        }
+      }
+    }
+  nft-config.json: |
+    {
+    }
