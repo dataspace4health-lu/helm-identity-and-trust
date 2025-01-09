@@ -17,6 +17,34 @@ iam:
       tag: 21.1.2-debian-11-r27
     containerSecurityContext:
       readOnlyRootFilesystem: false
+    initContainers: 
+    - name: iam-keycloak-init
+      image: curlimages/curl:latest
+      imagePullPolicy: IfNotPresent
+      env:
+      - name: VCISSUER_ISSUER_DID
+        value: did:web:dataspace4health.local:wallet:api:wallet-api:registry:0
+      command: ["sh", "-c"]
+      args:
+        - |
+          # wait for waltid issuer to be available
+          url=https://$(echo $VCISSUER_ISSUER_DID | sed 's|did:web:||' | sed 's|:|/|g')/did.json
+          wait-for-url() {
+            echo "Testing $1"
+            timeout -s TERM 200 sh -c \
+            'while [[ "$(curl -k -s -o /dev/null -L -w ''%{http_code}'' ${0})" != "200" ]];\
+            do echo "Waiting for ${0}" && sleep 20;\
+            done' ${1}
+            echo "OK!"
+            curl -kI $1
+          }
+          wait-for-url ${url}
+    - name: iam-keycloak-vc-issuer-init
+      image: quay.io/fiware/keycloak-vc-issuer:1.0.3
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+      - mountPath: /target
+        name: fiware-lib
     command: ["sh", "-c"]
     args:
     - |
@@ -27,9 +55,16 @@ iam:
         keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore /tmp/truststores/cacerts
       done
 
-      echo "Download FIWARE VC Issuer provider"
-      curl -sLS https://github.com/FIWARE/keycloak-vc-issuer/releases/download/1.0.3/vc-issuer-1.0.3.jar -o /opt/bitnami/keycloak/providers/vc-issuer-1.0.3.jar
-      
+      #echo "Download FIWARE VC Issuer provider"
+      #curl -sLS https://github.com/FIWARE/keycloak-vc-issuer/releases/download/1.0.3/vc-issuer-1.0.3.jar -o /opt/bitnami/keycloak/providers/vc-issuer-1.0.3.jar
+      cp /opt/bitnami/keycloak/custom_providers/vc-issuer.jar /opt/bitnami/keycloak/providers/
+      cp /opt/bitnami/keycloak/custom_providers/WaltID-ServiceMatrix-*.jar /opt/bitnami/keycloak/providers/
+      cp /opt/bitnami/keycloak/custom_providers/waltid*.jar /opt/bitnami/keycloak/providers/
+      cp /opt/bitnami/keycloak/custom_providers/kotlin*.jar /opt/bitnami/keycloak/providers/
+      cp /opt/bitnami/keycloak/custom_providers/ktor*.jar /opt/bitnami/keycloak/providers/
+      cp /opt/bitnami/keycloak/custom_providers/tink-*.jar /opt/bitnami/keycloak/providers/
+      cp /opt/bitnami/keycloak/custom_providers/protobuf-*.jar /opt/bitnami/keycloak/providers/
+
       JAVA_OPTS="-Djavax.net.ssl.trustStore=/tmp/truststores/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
       echo "Starting Keycloak"
       JAVA_OPTS=${JAVA_OPTS} /opt/bitnami/scripts/keycloak/entrypoint.sh /opt/bitnami/scripts/keycloak/run.sh
@@ -56,6 +91,10 @@ iam:
       mountPath: "/opt/keys/keyfile.json"
       subPath: "keyfile.json"
       readOnly: true
+    - name: fiware-lib
+      mountPath: "/opt/bitnami/keycloak/custom_providers/"
+    - name: fiware-data
+      mountPath: "/data"
     - name: dataspace4health-local
       mountPath: "/opt/dataspace4health.local/certs/dataspace4health.local.pem"
       subPath: dataspace4health.local.pem
@@ -73,6 +112,9 @@ iam:
         items:
         - key: "keyfile.json"
           path: "keyfile.json"
+    - name: fiware-lib
+    - name: fiware-data
+      emptyDir: {}
     - name: dataspace4health-local
       secret:
         secretName: dataspace4health.local
@@ -80,29 +122,12 @@ iam:
           - key: ca.crt
             path: dataspace4health.local.pem
         defaultMode: 420
-    initContainers: 
-    - name: iam-keycloak-init
-      image: curlimages/curl:latest
-      imagePullPolicy: IfNotPresent
-      env:
-      - name: VCISSUER_ISSUER_DID
-        value: did:web:dataspace4health.local:wallet:api:wallet-api:registry:0
-      command: ["sh", "-c"]
-      args:
-        - |
-          # wait for waltid issuer to be available
-          url=https://$(echo $VCISSUER_ISSUER_DID | sed 's|did:web:||' | sed 's|:|/|g')/did.json
-          wait-for-url() {
-            echo "Testing $1"
-            timeout -s TERM 200 sh -c \
-            'while [[ "$(curl -k -s -o /dev/null -L -w ''%{http_code}'' ${0})" != "200" ]];\
-            do echo "Waiting for ${0}" && sleep 20;\
-            done' ${1}
-            echo "OK!"
-            curl -kI $1
-          }
-          wait-for-url ${url}
     httpRelativePath: "/iam/"
+    logging:
+      level: "INFO,org.fiware.keycloak:DEBUG"
+    resources:
+      limits:
+        memory: "1Gi" # default 768Mi
     postgresql:
       enabled: true
       nameOverride: iam-postgresql
