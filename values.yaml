@@ -138,6 +138,18 @@ iam:
       enabled: true
       extraHosts:
       - name: ""
+      annotations: 
+        traefik.ingress.kubernetes.io/router.middlewares: default-waltid-iam-keycloak-replacebodyregex@kubernetescrd
+      replaceBody:
+        regex: (")/realms/(")
+        replacement: $1/iam/realms/$2
+        logLevel: -2
+        monitoring:
+          methods:
+          - GET
+          types:
+          - "*/*"
+          - text/javascript
       pathType: Prefix
       path: /iam
       extraTls:
