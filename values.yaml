@@ -37,8 +37,8 @@ iam:
       adminUser: admin
       adminPassword: "xfsc4Ntt!"
     extraEnvVars:
-    # - name: KEYCLOAK_EXTRA_ARGS
-    #   value: "--import-realm"
+    - name: KEYCLOAK_EXTRA_ARGS
+      value: "--import-realm"
     - name: PROXY_ADDRESS_FORWARDING
       value: "true"
     - name: VCISSUER_WALTID_ADDRESS
@@ -121,7 +121,9 @@ iam:
            - dataspace4health.local
   idpClients:
     - alias: waltid-idpkit
-      realm: master
+      realm: ds4h
+      realmAdminUser: testuser
+      realmAdminPass: xfsc4Ntt!
       displayName: "Login with SSI"
       idpClientName: keycloak
       idpOidcDiscoveryUrl: https://dataspace4health.local/idp/api/oidc/.well-known/openid-configuration

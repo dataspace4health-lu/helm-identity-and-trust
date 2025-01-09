@@ -20,8 +20,8 @@ keycloak:
     adminUser: admin
     adminPassword: "xfsc4Ntt!"
   extraEnvVars:
-    # - name: KEYCLOAK_EXTRA_ARGS
-    #   value: "--import-realm"
+    - name: KEYCLOAK_EXTRA_ARGS
+      value: "--import-realm"
     - name: PROXY_ADDRESS_FORWARDING
       value: "true"
   extraVolumeMounts:

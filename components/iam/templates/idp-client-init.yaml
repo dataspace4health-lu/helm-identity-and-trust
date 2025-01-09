@@ -1,4 +1,4 @@
-{{- if gt (len .Values.idpClients) 0 }}
+{{- if and .Values.idpClients (gt (len .Values.idpClients) 0) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -33,7 +33,7 @@ spec:
           #################################################
           # Wait Keycloak to be up and running
           #################################################
-          keycloak_url=http://{{ template "app.chartname" . }}-keycloak{{ .Values.keycloak.httpRelativePath }}
+          keycloak_url=http://{{ template "app.chartname" . }}-keycloak{{ default "/" .Values.keycloak.httpRelativePath }}
           wait-for-url ${keycloak_url}realms/master
           
           {{- range .Values.idpClients }}
@@ -43,10 +43,9 @@ spec:
           response=$(curl -k -s -w "|%{http_code}" -X POST \
             -H 'Content-Type: application/x-www-form-urlencoded' \
             -d "grant_type=password" \
-            -d "username={{ $.Values.keycloak.auth.adminUser }}" \
-            -d "password={{ $.Values.keycloak.auth.adminPassword }}" \
             -d "client_id=admin-cli" \
-            -d "client_secret=" \
+            -d "username={{ .realmAdminUser }}" \
+            -d "password={{ .realmAdminPass }}" \
             "${keycloak_url}realms/{{ .realm }}/protocol/openid-connect/token")
           body=$(echo $response | awk -F '|' '{print $1}')
           code=$(echo $response | awk -F '|' '{print $2}')
