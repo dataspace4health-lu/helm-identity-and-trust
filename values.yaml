@@ -141,8 +141,8 @@ iam:
       annotations: 
         traefik.ingress.kubernetes.io/router.middlewares: default-waltid-iam-keycloak-replacebodyregex@kubernetescrd
       replaceBody:
-        regex: (")/realms/(")
-        replacement: $1/iam/realms/$2
+        regex: accountURL\.host
+        replacement: accountURL.host + "/iam"
         logLevel: -2
         monitoring:
           methods:
