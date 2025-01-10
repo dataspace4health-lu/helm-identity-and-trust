@@ -10,5 +10,5 @@ data:
         "issuerDid": {{ .Values.config.issuer.did | quote }},
         "proofType": {{ .Values.config.issuer.proofType | quote }}
       },
-      "templatesFolder": "vc-templates-runtime"
+      "templatesFolder": {{ .Values.config.issuer.templatesFolder | quote }}
     }

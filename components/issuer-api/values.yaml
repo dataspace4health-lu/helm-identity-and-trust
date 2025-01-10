@@ -77,6 +77,7 @@ config:
   issuer:
     did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
     proofType: "LD_PROOF"
+    templatesFolder: "data/credential-store/templates"
   vault:
     url: http://waltid-wallet-api-vault-server-headless.default.svc.cluster.local:8200
     token: root

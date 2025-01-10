@@ -366,6 +366,7 @@ issuer-api:
     issuer:
       did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
       proofType: "LD_PROOF"
+      templatesFolder: "data/credential-store/templates"
     vault:
       url: http://waltid-wallet-api-vault-server-headless.default.svc.cluster.local:8200
       token: root
@@ -416,11 +417,13 @@ issuer-api:
     replaceHeader:
       header: Location
       regex: (/|^)swagger(.*)
-      replacement: ./api/swagger$2
+      # replacement: ./api/swagger$2
+      replacement: /issuer/api/v1/swagger$2
     replaceBody:
       regex: (href=|src=|['"]?url['"]?:\s?)(['"])?\/(v1|api-routes)?([^'"]*)(['"])?
       #replacement: $1$2${3:+.:..}/$3$4$5
-      replacement: $1$2./$3$4$5
+      #replacement: $1$2./$3$4$5
+      replacement: $1$2../$3$4$5
       logLevel: -2
       monitoring:
         methods:
