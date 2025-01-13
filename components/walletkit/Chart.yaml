@@ -1,0 +1,5 @@
+apiVersion: v2
+appVersion:  v1.0.0
+description: Walt.id Wallet Kit Deployment
+name: walletkit
+version: 1.0.0

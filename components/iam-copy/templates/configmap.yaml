@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "app.chartname" . }}-keycloak-configmap"
+  namespace: {{ .Release.Namespace }}
+data:
+  iam-realm.json: |-
+{{ .Files.Get "iam-realm.json" | indent 4}}

@@ -1,8 +1,8 @@
-{{- if and .Values.idpClients (gt (len .Values.idpClients) 0) }}
+{{- if and .Values.clients (gt (len .Values.clients) 0) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ template "app.chartname" . }}-idp-client-init
+  name: {{ template "app.chartname" . }}-keyclaok-client-init
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "app.labels" . | nindent 4 }}
@@ -14,7 +14,7 @@ spec:
   template:
     spec:
       containers:
-      - name: {{ template "app.chartname" . }}-init
+      - name: {{ template "app.chartname" . }}-keyclaok-client-init
         image: curlimages/curl:latest
         command: ["sh", "-c"]
         args:
@@ -36,7 +36,8 @@ spec:
           keycloak_url=http://{{ template "app.chartname" . }}-keycloak{{ default "/" .Values.keycloak.httpRelativePath }}
           wait-for-url ${keycloak_url}realms/master
           
-          {{- range .Values.idpClients }}
+          {{- range .Values.clients }}
+          {{- $realm := .realm }}
           #################################################
           # Get Keycloak token
           #################################################
@@ -46,7 +47,7 @@ spec:
             -d "client_id=admin-cli" \
             -d "username={{ .realmAdminUser }}" \
             -d "password={{ .realmAdminPass }}" \
-            "${keycloak_url}realms/{{ .realm }}/protocol/openid-connect/token")
+            "${keycloak_url}realms/{{ $realm }}/protocol/openid-connect/token")
           body=$(echo $response | awk -F '|' '{print $1}')
           code=$(echo $response | awk -F '|' '{print $2}')
           if [ $code -eq 200 ]; then
@@ -58,21 +59,62 @@ spec:
 
           access_token=$(echo $body | grep -m1 -oE '"access_token":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
 
+          {{- range .issuers }}
           #################################################
-          # Register client {{ .idpClientName }}
+          # Register client for issuer {{ .did }}
           #################################################
           response=$(curl -k -s -w "|%{http_code}" -X POST \
             -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer $access_token" \
             -d "{
-              \"client_name\": \"{{ .idpClientName }}\",
-              \"redirect_uris\": [ \"{{ .idpRedirectUri }}\" ],
-              \"all_redirect_uris\": false
+              \"name\": \"siop-client\",
+              \"clientDid\": \"{{ .did }}\",
+              \"description\": \"Client to issue Verifiable Credentials.\",
+              \"supportedVCTypes\": [
+                {{- range $i, $elem := .supportedVCTypes }}
+                {{- if gt $i 0 }},{{- end }}
+                {
+                  \"type\": \"{{ $elem.type }}\",
+                  \"format\": \"{{ $elem.format }}\" 
+                }
+                {{- end }}
+              ],
+              \"expiryInMin\": 3600,
+              \"additionalClaims\": {
+                {{- $last := sub (len .additionalClaims) 1 }}
+                {{- range $i, $elem := .additionalClaims }}
+                \"{{ $elem.vcType }}_claims\": \"{{ $elem.claims }}\"
+                {{- if ne $i $last }},{{- end }}
+                {{- end }}
+              }
             }" \
-            "{{ .idpClientRegisterUrl }}")
+            "${keycloak_url}realms/{{ $realm }}/clients-registrations/SIOP-2")
           body=$(echo $response | awk -F '|' '{print $1}')
           code=$(echo $response | awk -F '|' '{print $2}')
           if [ $code -eq 201 ]; then
             echo "Client {{ .idpClientName }} registered"
+          else
+            echo "Bad Request"
+            exit 1
+          fi
+          {{- end }}
+
+          {{- range .identityProviders }}
+          #################################################
+          # Register client {{ .clientName }}
+          #################################################
+          response=$(curl -k -s -w "|%{http_code}" -X POST \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"client_name\": \"{{ .clientName }}\",
+              \"redirect_uris\": [ \"{{ .redirectUri }}\" ],
+              \"all_redirect_uris\": false
+            }" \
+            "{{ .clientRegisterUrl }}")
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 201 ]; then
+            echo "Client {{ .clientName }} registered"
           else
             echo "Bad Request"
             exit 1
@@ -86,7 +128,7 @@ spec:
           #################################################
           response=$(curl -k -s -w "|%{http_code}" -X GET \
             -H 'Content-Type: application/json' \
-            "{{ .idpOidcDiscoveryUrl }}")
+            "{{ .oidcDiscoveryUrl }}")
           body=$(echo $response | awk -F '|' '{print $1}')
           code=$(echo $response | awk -F '|' '{print $2}')
           if [ $code -eq 200 ]; then
@@ -124,7 +166,7 @@ spec:
                 \"defaultScope\": \"openid profile\"
               }
             }" \
-            "${keycloak_url}admin/realms/{{ .realm }}/identity-provider/instances")
+            "${keycloak_url}admin/realms/{{ $realm }}/identity-provider/instances")
           body=$(echo $response | awk -F '|' '{print $1}')
           code=$(echo $response | awk -F '|' '{print $2}')
           if [ $code -eq 201 ]; then
@@ -133,6 +175,8 @@ spec:
             echo "Bad Request"
             exit 1
           fi
+          {{- end }}
+
           {{- end }}
 
           exit 0

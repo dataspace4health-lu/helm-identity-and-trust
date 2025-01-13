@@ -24,6 +24,12 @@ keycloak:
       value: "--import-realm"
     - name: PROXY_ADDRESS_FORWARDING
       value: "true"
+    - name: KC_PROXY
+      value: "edge"
+    - name: KC_PROXY_HEADERS
+      value: "xforwarded"
+    - name: KC_FEATURES
+      value: "oid4vc-vci"
   extraVolumeMounts:
     - name: config
       mountPath: "/opt/bitnami/keycloak/data/import/iam-realm.json"
@@ -36,7 +42,7 @@ keycloak:
   extraVolumes:
     - name: config
       configMap:
-        name: iam-keycloak-configmap
+        name: iam-copy-keycloak-configmap
         items:
         - key: "iam-realm.json"
           path: "iam-realm.json"

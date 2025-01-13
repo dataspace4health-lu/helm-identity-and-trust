@@ -54,8 +54,8 @@ spec:
             {{- end }}
 
             echo "Starting SSIKit" 
-            # JAVA_OPTS="-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG" bin/waltid-ssikit serve -b 0.0.0.0
-            /app/bin/waltid-ssikit serve -b 0.0.0.0
+            # JAVA_OPTS="-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG" bin/waltid-walletkit run
+            bin/waltid-walletkit run
         {{- if .Values.useSecretRef }}
         envFrom:
           - secretRef:
@@ -87,26 +87,21 @@ spec:
         {{- if .Values.config.ports }}
 {{ toYaml .Values.config.ports | indent 8 }}
         {{- end }}
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 7000
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          successThreshold: 2
-          failureThreshold: 2
-          timeoutSeconds: 5
+        # readinessProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 7000
+        #   initialDelaySeconds: 5
+        #   periodSeconds: 5
+        #   successThreshold: 2
+        #   failureThreshold: 2
+        #   timeoutSeconds: 5
         volumeMounts:
-          - name: issuer-api-config
-            mountPath: "/app/config/signatory.conf"
-            subPath: "signatory.conf"
+          - name: walletkit-config
+            mountPath: "/waltid/wallet/config/"
             readOnly: true
-          - mountPath: "/app/data/credential-store"
-            name: data-volume
-          - mountPath: "/app/data/revocation"
-            name: data-volume
-          - mountPath: "/app/data/vc"
-            name: data-volume
+          - name: walletkit-data
+            mountPath: "/waltid/wallet/data/"
           {{ $name := .Values.name }}
           {{- range .Values.ingress.tls }}
           - name: {{ .secretName | replace "." "-" }}
@@ -117,13 +112,10 @@ spec:
         resources:
 {{ toYaml .Values.resources | indent 10 }}
       volumes:
-      - name: issuer-api-config
+      - name: walletkit-config
         configMap:
-          items:
-            - key: signatory.conf
-              path: signatory.conf
           name: "{{ template "app.chartname" . }}-configmap"
-      - name: data-volume
+      - name: walletkit-data
         persistentVolumeClaim:
           claimName: {{ template "app.chartname" . }}-data
       {{- range .Values.ingress.tls }}

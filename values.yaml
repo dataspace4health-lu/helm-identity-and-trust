@@ -124,7 +124,7 @@ iam:
         defaultMode: 420
     httpRelativePath: "/iam/"
     logging:
-      level: "INFO,org.fiware.keycloak:DEBUG"
+      level: "INFO,org.fiware.keycloak:DEBUG,org.keycloak.protocol.oid4vc:DEBUG"
     resources:
       limits:
         memory: "1Gi" # default 768Mi
@@ -139,9 +139,9 @@ iam:
       extraHosts:
       - name: ""
       annotations: 
-        traefik.ingress.kubernetes.io/router.middlewares: default-waltid-iam-keycloak-replacebodyregex@kubernetescrd
+        traefik.ingress.kubernetes.io/router.middlewares: default-waltid-iam-keycloak-replacebodyregex-0@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-1@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-2@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-3@kubernetescrd
       replaceBody:
-        regex: accountURL\.host
+      - regex: accountURL\.host # fixup for fiware, to make OIDC4VCI to work
         replacement: accountURL.host + "/iam"
         logLevel: -2
         monitoring:
@@ -150,22 +150,58 @@ iam:
           types:
           - "*/*"
           - text/javascript
+      - regex: (,)(")user_pin_required("):false # fixup for fiware, to make OIDC4VCI to work 
+        replacement:
+        logLevel: -2
+        monitoring:
+          methods:
+          - GET
+          types:
+          - "*/*"
+          - application/json
+      - regex: const credUrl = offerURI\.issuer # fixup for fiware, to make OIDC4VCI to work 
+        replacement: const credUrl = offerURI.issuer.replace(/https?/g,"openid-credential-offer")
+        logLevel: -2
+        monitoring:
+          methods:
+          - GET
+          types:
+          - "*/*"
+          - text/javascript
+      - regex: \"credentials\"\:\[[^\]]+\] # fixup for fiware, to make OIDC4VCI to work
+        replacement: "\"credential_configuration_ids\":[\"LegalPerson_ldp_vc\"]"
+        logLevel: -2
+        monitoring:
+          methods:
+          - GET
+          types:
+          - "*/*"
+          - application/json
       pathType: Prefix
       path: /iam
       extraTls:
         - secretName: dataspace4health.local
           hosts:
            - dataspace4health.local
-  idpClients:
+  clients:
+  - realm: ds4h
+    realmAdminUser: testuser
+    realmAdminPass: xfsc4Ntt!
+    issuers:
+    - did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
+      supportedVCTypes: 
+      - type: "LegalPerson"
+        format: "ldp_vc"
+      additionalClaims: 
+      - vcType: "LegalPerson"
+        claims: "givenName,familyName,gender,birthDate,address"
+    identityProviders:
     - alias: waltid-idpkit
-      realm: ds4h
-      realmAdminUser: testuser
-      realmAdminPass: xfsc4Ntt!
       displayName: "Login with SSI"
-      idpClientName: keycloak
-      idpOidcDiscoveryUrl: https://dataspace4health.local/idp/api/oidc/.well-known/openid-configuration
-      idpClientRegisterUrl: http://waltid-idp-api.default.svc.cluster.local:8080/api/oidc/clients/register
-      idpRedirectUri: https://dataspace4health.local/iam/realms/master/broker/waltid-idpkit/endpoint
+      clientName: keycloak
+      oidcDiscoveryUrl: https://dataspace4health.local/idp/api/oidc/.well-known/openid-configuration
+      clientRegisterUrl: http://waltid-idp-api.default.svc.cluster.local:8080/api/oidc/clients/register
+      redirectUri: https://dataspace4health.local/iam/realms/master/broker/waltid-idpkit/endpoint
 idp-api:
   nameOverride: idp-api
   config:
@@ -340,14 +376,14 @@ wallet-api:
       replacement: /wallet/api/swagger$2
     replaceBody:
       regex: (")?url(")?(\s)?(:) "\/("|api\.json")
-      replacement: url $4 "/wallet/api/$5
+      replacement: url $4 "/wallet/api/$5 
       logLevel: -2
       monitoring:
         methods:
         - GET
         types:
         - "*/*"
-        - application/javascript
+        #- application/javascript
         - application/json
     tls:
       - secretName: dataspace4health.local
