@@ -139,7 +139,7 @@ iam:
       extraHosts:
       - name: ""
       annotations: 
-        traefik.ingress.kubernetes.io/router.middlewares: default-waltid-iam-keycloak-replacebodyregex-0@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-1@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-2@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-3@kubernetescrd
+        traefik.ingress.kubernetes.io/router.middlewares: default-waltid-iam-keycloak-replacebodyregex-0@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-1@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-2@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-3@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-4@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-5@kubernetescrd
       replaceBody:
       - regex: accountURL\.host # fixup for fiware, to make OIDC4VCI to work
         replacement: accountURL.host + "/iam"
@@ -168,8 +168,26 @@ iam:
           types:
           - "*/*"
           - text/javascript
-      - regex: \"credentials\"\:\[[^\]]+\] # fixup for fiware, to make OIDC4VCI to work
+      - regex: \"credentials\"\s*:\s*\[[^\]]+\] # fixup for fiware, to make OIDC4VCI to work
         replacement: "\"credential_configuration_ids\":[\"LegalPerson_ldp_vc\"]"
+        logLevel: -2
+        monitoring:
+          methods:
+          - GET
+          types:
+          - "*/*"
+          - application/json
+      - regex: \"credentials_supported"\s*:\s*\[(\s*\{[\s\S]*?\}\s*)\] # fixup for fiware, to make OIDC4VCI to work
+        replacement: "\"credential_configurations_supported\":{\"LegalPerson_ldp_vc\":$1}"
+        logLevel: -2
+        monitoring:
+          methods:
+          - GET
+          types:
+          - "*/*"
+          - application/json
+      - regex: credentials\s*:\s*\[[^\]]+\] # fixup for fiware, to make OIDC4VCI to work
+        replacement: credential_configuration_ids:[SupportedCredential(type=LegalPerson, format=ldp_vc)]
         logLevel: -2
         monitoring:
           methods:
