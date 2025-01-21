@@ -196,7 +196,7 @@ iam:
           - application/json
       # Change the POST request made by Walt.id Wallet API to Fiware token endpoint.
       # Replace pre-authorized_code with code.
-      - regex: pre-authorized_code=
+      - regex: pre\-authorized_code\=
         replacement: "code="
         logLevel: -2
         monitoring:
@@ -204,12 +204,6 @@ iam:
           - POST
           types:
           - application/x-www-form-urlencoded
-      pathType: Prefix
-      path: /iam
-      extraTls:
-        - secretName: dataspace4health.local
-          hosts:
-           - dataspace4health.local
   clients:
   - realm: ds4h
     realmAdminUser: testuser
