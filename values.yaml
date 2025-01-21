@@ -204,6 +204,12 @@ iam:
           - POST
           types:
           - application/x-www-form-urlencoded
+      pathType: Prefix
+      path: /iam
+      extraTls:
+        - secretName: dataspace4health.local
+          hosts:
+           - dataspace4health.local
   clients:
   - realm: ds4h
     realmAdminUser: testuser
