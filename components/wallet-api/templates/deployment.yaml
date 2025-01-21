@@ -51,7 +51,7 @@ spec:
             done
             
             echo "Starting VC Wallet API"
-            /waltid-wallet-api/bin/waltid-wallet-api
+            /waltid-wallet-api/bin/waltid-wallet-api --log-level=trace
           {{- end }}
         {{- if .Values.useSecretRef }}
         envFrom:
@@ -82,15 +82,15 @@ spec:
         {{- end }}
           - name: http
             containerPort: {{ .Values.config.http.port }}   
-        readinessProbe:
-          httpGet:
-            path: /livez
-            port: {{ .Values.config.http.port }}
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          successThreshold: 2
-          failureThreshold: 2
-          timeoutSeconds: 5
+        # readinessProbe:
+        #   httpGet:
+        #     path: /livez
+        #     port: {{ .Values.config.http.port }}
+        #   initialDelaySeconds: 5
+        #   periodSeconds: 5
+        #   successThreshold: 2
+        #   failureThreshold: 2
+        #   timeoutSeconds: 5
         volumeMounts:
           - name: wallet-config
             mountPath: /waltid-wallet-api/config/_features.conf
@@ -112,6 +112,10 @@ spec:
             mountPath: /waltid-wallet-api/config/registration-defaults.conf
             readOnly: true
             subPath: registration-defaults.conf
+          - name: wallet-config
+            mountPath: /waltid-wallet-api/config/logins.conf
+            readOnly: true
+            subPath: logins.conf
           - name: wallet-auth-secret
             mountPath: /waltid-wallet-api/config/auth.conf
             readOnly: true

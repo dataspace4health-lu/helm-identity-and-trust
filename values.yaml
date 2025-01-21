@@ -17,7 +17,7 @@ iam:
       tag: 21.1.2-debian-11-r27
     containerSecurityContext:
       readOnlyRootFilesystem: false
-    initContainers: 
+    initContainers:
     - name: iam-keycloak-init
       image: curlimages/curl:latest
       imagePullPolicy: IfNotPresent
@@ -48,7 +48,7 @@ iam:
     command: ["sh", "-c"]
     args:
     - |
-      for f in /opt/dataspace4health.local/certs/*.pem; do 
+      for f in /opt/dataspace4health.local/certs/*.pem; do
         echo "Adding certificate $f to keystore"
         certname=$(echo $(basename $f) | sed 's|.crt||g' )
         mkdir -p /tmp/truststores
@@ -76,6 +76,8 @@ iam:
       value: "--import-realm"
     - name: PROXY_ADDRESS_FORWARDING
       value: "true"
+    - name: KC_FEATURES
+      value: token-exchange,admin-fine-grained-authz # required by Walt.Id Wallet API
     - name: VCISSUER_WALTID_ADDRESS
       value: http://waltid-issuer-api.default.svc.cluster.local
     - name: VCISSUER_ISSUER_DID
@@ -138,10 +140,11 @@ iam:
       enabled: true
       extraHosts:
       - name: ""
-      annotations: 
-        traefik.ingress.kubernetes.io/router.middlewares: default-waltid-iam-keycloak-replacebodyregex-0@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-1@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-2@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-3@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-4@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-5@kubernetescrd
+      annotations:
+        traefik.ingress.kubernetes.io/router.middlewares: default-waltid-iam-keycloak-replacebodyregex-0@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-1@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-2@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-3@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-4@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-5@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-6@kubernetescrd
       replaceBody:
-      - regex: accountURL\.host # fixup for fiware, to make OIDC4VCI to work
+      # fixup for fiware, to work under correct path
+      - regex: accountURL\.host
         replacement: accountURL.host + "/iam"
         logLevel: -2
         monitoring:
@@ -150,7 +153,8 @@ iam:
           types:
           - "*/*"
           - text/javascript
-      - regex: (,)(")user_pin_required("):false # fixup for fiware, to make OIDC4VCI to work 
+      # fixup for fiware, to make OIDC4VCI to work
+      - regex: (,)(")user_pin_required("):false
         replacement:
         logLevel: -2
         monitoring:
@@ -159,7 +163,8 @@ iam:
           types:
           - "*/*"
           - application/json
-      - regex: const credUrl = offerURI\.issuer # fixup for fiware, to make OIDC4VCI to work 
+      # fixup for fiware, to generate a correct credential offer according to OIDC4VCI
+      - regex: const credUrl = offerURI\.issuer
         replacement: const credUrl = offerURI.issuer.replace(/https?/g,"openid-credential-offer")
         logLevel: -2
         monitoring:
@@ -168,7 +173,8 @@ iam:
           types:
           - "*/*"
           - text/javascript
-      - regex: \"credentials\"\s*:\s*\[[^\]]+\] # fixup for fiware, to make OIDC4VCI to work
+      # fixup for fiware, to make OIDC4VCI to work
+      - regex: \"credentials\":\[[^\]]+\]
         replacement: "\"credential_configuration_ids\":[\"LegalPerson_ldp_vc\"]"
         logLevel: -2
         monitoring:
@@ -177,8 +183,10 @@ iam:
           types:
           - "*/*"
           - application/json
-      - regex: \"credentials_supported"\s*:\s*\[(\s*\{[\s\S]*?\}\s*)\] # fixup for fiware, to make OIDC4VCI to work
-        replacement: "\"credential_configurations_supported\":{\"LegalPerson_ldp_vc\":$1}"
+      # Change reply from fiware openid-credential-issuer endpoint to the one expected by Walt.id.
+      # Include the token_endpoint and replace credentials_supported property with credential_configurations_supported
+      - regex: \"credentials_supported":\[(\{[^\}]+\})\]
+        replacement: "\"token_endpoint\":\"https://dataspace4health.local/iam/realms/ds4h/verifiable-credential/did:web:dataspace4health.local:wallet:api:wallet-api:registry:0/token\",\"credential_configurations_supported\":{\"LegalPerson_ldp_vc\":$1}"
         logLevel: -2
         monitoring:
           methods:
@@ -186,15 +194,16 @@ iam:
           types:
           - "*/*"
           - application/json
-      - regex: credentials\s*:\s*\[[^\]]+\] # fixup for fiware, to make OIDC4VCI to work
-        replacement: credential_configuration_ids:[SupportedCredential(type=LegalPerson, format=ldp_vc)]
+      # Change the POST request made by Walt.id Wallet API to Fiware token endpoint.
+      # Replace pre-authorized_code with code.
+      - regex: pre-authorized_code=
+        replacement: "code="
         logLevel: -2
         monitoring:
           methods:
-          - GET
+          - POST
           types:
-          - "*/*"
-          - application/json
+          - application/x-www-form-urlencoded
       pathType: Prefix
       path: /iam
       extraTls:
@@ -207,10 +216,10 @@ iam:
     realmAdminPass: xfsc4Ntt!
     issuers:
     - did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
-      supportedVCTypes: 
+      supportedVCTypes:
       - type: "LegalPerson"
         format: "ldp_vc"
-      additionalClaims: 
+      additionalClaims:
       - vcType: "LegalPerson"
         claims: "givenName,familyName,gender,birthDate,address"
     identityProviders:
@@ -350,7 +359,7 @@ wallet-api:
       oidcRealm: "https://dataspace4health.local/iam/realms/ds4h"
       # JWKS (to verify access keys the user claims to received through OIDC server)
       oidcJwks: "${oidcRealm}/protocol/openid-connect/certs"
-      oidcScopes: ["oidc","roles"]
+      oidcScopes: ["openid", "roles"]
 
       authorizeUrl: "${oidcRealm}/protocol/openid-connect/auth"
       accessTokenUrl: "${oidcRealm}/protocol/openid-connect/token"
@@ -394,14 +403,14 @@ wallet-api:
       replacement: /wallet/api/swagger$2
     replaceBody:
       regex: (")?url(")?(\s)?(:) "\/("|api\.json")
-      replacement: url $4 "/wallet/api/$5 
+      replacement: url $4 "/wallet/api/$5
       logLevel: -2
       monitoring:
         methods:
         - GET
         types:
         - "*/*"
-        #- application/javascript
+        - application/javascript
         - application/json
     tls:
       - secretName: dataspace4health.local
@@ -414,7 +423,7 @@ issuer-api:
       size: 100Mi
     wallet:
       url: "http://waltid-wallet-api.default.svc.cluster.local:8080"
-      account: 
+      account:
         email: "wallet@ntt.com"
         pass: "xfsc4Ntt!"
     issuer:
@@ -493,7 +502,7 @@ issuer-api:
           - dataspace4health.local
 wallet-ui:
   nameOverride: wallet-ui
-  config:     
+  config:
     basePath: /wallet/ui
     issuer_callback_url: "https://dataspace4health.local/issuer/api"
     wallet_api_url: "https://dataspace4health.local/wallet/api"

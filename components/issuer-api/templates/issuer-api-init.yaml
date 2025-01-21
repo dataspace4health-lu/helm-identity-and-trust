@@ -113,6 +113,23 @@ spec:
           kid_pub="$(echo $kid_pub | awk '{gsub(/_/,"/",$1); gsub(/-/,"+",$1); print $1}')="
 
           #################################################
+          # Logout user from Wallet
+          #################################################
+          response=$(curl -s -w "|%{http_code}" -X POST \
+            '{{ .Values.config.wallet.url }}/wallet-api/auth/logout' \
+            -H 'accept: */*' \
+            -H "Authorization: Bearer $token" \
+            -d '')
+          body=$(echo $response | awk -F '|' '{print $1}')
+          code=$(echo $response | awk -F '|' '{print $2}')
+          if [ $code -eq 200 ]; then
+            echo "Logout successful"
+          else
+            echo "Logout failed"
+            exit 1
+          fi
+
+          #################################################
           # Get List of Keys from Vault
           #################################################
           response=$(curl -s -w "|%{http_code}" -X LIST \

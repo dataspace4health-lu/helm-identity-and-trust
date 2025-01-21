@@ -100,13 +100,11 @@ data:
 #        "Unsure about accuracy",
 #        "Need more details",
 #    ]
-#  logins.conf: |
-#    enabledLoginMethods: [
-#        "email",
-#        "web3",
-#        "oidc",
-#        "passkeys"
-#    ]
+  logins.conf: |
+    enabledLoginMethods: [
+      "email",
+      "oidc"
+    ]
 #  oci.conf: |
 #    vaultId = "ocid1.vault.oc1.eu-frankfurt-1.entcvrlraabc4.abtheljrpyimqvzheblr6ce4bqt2snnz36i4etlgtg32n4du5dbrnpgagf6q"
 #    compartmentId = "ocid1.compartment.oc1..aaaaaaaawirugoz35riiybcxsvf7bmelqsxo3sajaav5w3i2vqowcwqrllxa"
