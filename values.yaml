@@ -18,7 +18,7 @@ iam:
     containerSecurityContext:
       readOnlyRootFilesystem: false
     initContainers: 
-    - name: iam-keycloak-init
+    - name: test-name
       image: curlimages/curl:latest
       imagePullPolicy: IfNotPresent
       env:
