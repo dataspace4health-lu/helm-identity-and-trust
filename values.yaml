@@ -90,7 +90,7 @@ iam:
     - name: extra-config
       mountPath: "/opt/keys/keyfile.json"
       subPath: "keyfile.json"
-      readOnly: true
+      readOnly: false
     - name: fiware-lib
       mountPath: "/opt/bitnami/keycloak/custom_providers/"
     - name: fiware-data
