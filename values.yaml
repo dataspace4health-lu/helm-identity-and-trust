@@ -174,9 +174,8 @@ iam:
           - "*/*"
           - text/javascript
       # fixup for fiware, to make OIDC4VCI to work
-      - regex: \"credentials\":\[[^\]]+\]
-        replacement: "\"credential_configuration_ids\":[\"LegalPerson_ldp_vc\"]"
-        logLevel: -2
+      - regex: \"credentials":\[\{"type":"([^"]+)","format":"([^"]+)"[^}]*\}\]
+        replacement:  "\"credential_configuration_ids\":[\"${1}_${2}\"]"
         monitoring:
           methods:
           - GET
@@ -185,8 +184,8 @@ iam:
           - application/json
       # Change reply from fiware openid-credential-issuer endpoint to the one expected by Walt.id.
       # Include the token_endpoint and replace credentials_supported property with credential_configurations_supported
-      - regex: \"credentials_supported":\[(\{[^\}]+\})\]
-        replacement: "\"token_endpoint\":\"https://dataspace4health.local/iam/realms/ds4h/verifiable-credential/did:web:dataspace4health.local:wallet:api:wallet-api:registry:0/token\",\"credential_configurations_supported\":{\"LegalPerson_ldp_vc\":$1}"
+      - regex: \"credentials_supported":\[\{\"format\":"([^"]+)",\"id":"([^"]+)",\"types":(\[[^\]]+\]),\"cryptographic_binding_methods_supported":(\[[^\]]+\]),\"cryptographic_suites_supported":(\[[^\]]+\])\}\]
+        replacement: "\"token_endpoint\":\"https://dataspace4health.local/iam/realms/ds4h/verifiable-credential/did:web:dataspace4health.local:wallet:api:wallet-api:registry:0/token\",\"credential_configurations_supported\":{\"${2}\":{\"format\":\"$1\",\"id\":\"${2}\",\"types\":${3},\"cryptographic_binding_methods_supported\":${4},\"cryptographic_suites_supported\":${5}}}"
         logLevel: -2
         monitoring:
           methods:
