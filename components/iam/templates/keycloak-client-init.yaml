@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ template "app.chartname" . }}-keyclaok-client-init
+  name: {{ template "app.chartname" . }}-keycloak-client-init
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "app.labels" . | nindent 4 }}
