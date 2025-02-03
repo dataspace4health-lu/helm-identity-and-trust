@@ -155,7 +155,7 @@ iam:
     - did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
       supportedVCTypes:
       - type: "LegalPerson"
-        format: "jwt_vc_json"
+        format: "ldp_vc"
       additionalClaims:
       - vcType: "LegalPerson"
         claims: "givenName,familyName,gender,birthDate,address"
