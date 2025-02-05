@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: "{{ template "app.chartname" . }}-configmap"
+  name: "{{ template "app.chartname" . }}-signatory"
   namespace: {{ .Release.Namespace }}
 data:
   signatory.conf: |
@@ -12,3 +12,13 @@ data:
       },
       "templatesFolder": {{ .Values.config.issuer.templatesFolder | quote }}
     }
+{{- range .Values.config.vcTemplates }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ template "app.chartname" $ }}-vc-template-{{ .name | lower }}"
+  namespace: {{ $.Release.Namespace }}
+data:
+  {{ .name }}: {{ .value | toJson }}
+{{- end }}

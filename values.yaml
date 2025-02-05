@@ -371,6 +371,30 @@ issuer-api:
     vault:
       url: http://waltid-wallet-api-vault-server-headless.default.svc.cluster.local:8200
       token: root
+    vcTemplates:
+    - name: NaturalPerson
+      value: |
+        {
+          "type": [
+            "VerifiableCredential",
+            "NaturalPerson"
+          ],
+          "@context": [
+            "https://www.w3.org/2018/credentials/v1"
+          ],
+          "id": "string",
+          "issuer": "string",
+          "issuanceDate": "timestamp",
+          "issued": "timestamp",
+          "validFrom": "timestamp",
+          "credentialSubject": {
+            "id": "string",
+            "firstName": "string",
+            "familyName": "string",
+            "email": "string",
+            "roles": "string"
+          }
+        }
     http:
       host: ""
       ports:
