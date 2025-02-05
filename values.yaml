@@ -127,7 +127,7 @@ iam:
         defaultMode: 420
     httpRelativePath: "/iam/"
     logging:
-      level: "DEBUG,org.fiware:DEBUG"
+      level: "INFO,org.fiware:DEBUG"
     resources:
       limits:
         memory: "1Gi" # default 768Mi
@@ -154,11 +154,12 @@ iam:
     issuers:
     - did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
       supportedVCTypes:
-      - type: "LegalPerson"
+      - type: "NaturalPerson"
         format: "ldp_vc"
-      additionalClaims:
-      - vcType: "LegalPerson"
-        claims: "givenName,familyName,gender,birthDate,address"
+        claims: "firstName,familyName,email,roles"
+      claims:
+      - vcType: "NaturalPerson"
+        claims: "firstName,familyName,email,roles"
     identityProviders:
     - alias: waltid-idpkit
       displayName: "Login with SSI"

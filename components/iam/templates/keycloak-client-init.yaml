@@ -80,11 +80,22 @@ spec:
                 {{- end }}
               ],
               \"expiryInMin\": 3600,
+              \"claims\": {
+                {{- if .claims }}
+                {{- $last := sub (len .claims) 1 }}
+                {{- range $i, $elem := .claims }}
+                \"{{ $elem.vcType }}_claims\": \"{{ $elem.claims }}\"
+                {{- if ne $i $last }},{{- end }}
+                {{- end }}
+                {{- end }}
+              },
               \"additionalClaims\": {
+                {{- if .additionalClaims }}
                 {{- $last := sub (len .additionalClaims) 1 }}
                 {{- range $i, $elem := .additionalClaims }}
                 \"{{ $elem.vcType }}_claims\": \"{{ $elem.claims }}\"
                 {{- if ne $i $last }},{{- end }}
+                {{- end }}
                 {{- end }}
               }
             }" \
