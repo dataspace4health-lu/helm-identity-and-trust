@@ -51,7 +51,7 @@ spec:
             done
             
             echo "Starting IDP API"
-            JAVA_OPTS='-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG' /app/bin/waltid-idpkit run
+            JAVA_OPTS='-Dorg.slf4j.simpleLogger.log.id.walt=DEBUG' /app/bin/waltid-idpkit run
         {{- end }}
         {{- if .Values.useSecretRef }}
         envFrom:

@@ -173,14 +173,17 @@ idp-api:
     persistance:
       size: 100Mi
     externalUrl: https://dataspace4health.local/idp
-    #verifierUiUrl: https://dataspace4health.local/verifier/ui
-    verifierApiUrl: https://dataspace4health.local/verifier/api/v1 # important! must be full url
+    verifierUiUrl: https://dataspace4health.local/idp/ui/sharecredential?state=
+    verifierApiUrl: https://dataspace4health.local/idp/api/siop/default  # important! must be full url
     walletUrl: /wallet/ui
   ingress:
     enabled: true
     hosts:
       - paths:
         # Prevent access to path /oidc/clients
+        - path: /idp/webjars
+          port: 8080
+          pathType: Prefix
         - path: /idp/api/swagger
           port: 8080
           pathType: Prefix
