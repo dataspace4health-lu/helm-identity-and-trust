@@ -61,9 +61,10 @@ spec:
         envFrom:
           - configMapRef:
               name: {{ .Values.configMapName }}
-        {{- else }}
-        env:
         {{- end }}
+        env:
+          - name: WALTID_SSIKIT_CUSTODIAN_URL
+            value: {{ .Values.config.waltidCustodianUrl }}
         {{- if .Values.secretEnv }}
           {{- range $key, $value := .Values.secretEnv }}
           - name: "{{ $key }}"
