@@ -40,8 +40,9 @@ iam:
           }
           wait-for-url ${url}
     - name: iam-keycloak-vc-issuer-init
-      image: quay.io/fiware/keycloak-vc-issuer:1.0.3
-      imagePullPolicy: IfNotPresent
+      #image: quay.io/fiware/keycloak-vc-issuer:1.0.3
+      image: ds4h-registry:5432/fiware/keycloak-vc-issuer
+      imagePullPolicy: Always
       volumeMounts:
       - mountPath: /target
         name: fiware-lib
@@ -126,7 +127,7 @@ iam:
         defaultMode: 420
     httpRelativePath: "/iam/"
     logging:
-      level: "INFO,org.fiware.keycloak:DEBUG,org.keycloak.protocol.oid4vc:DEBUG"
+      level: "DEBUG,org.fiware:DEBUG"
     resources:
       limits:
         memory: "1Gi" # default 768Mi
@@ -140,69 +141,6 @@ iam:
       enabled: true
       extraHosts:
       - name: ""
-      annotations:
-        traefik.ingress.kubernetes.io/router.middlewares: default-waltid-iam-keycloak-replacebodyregex-0@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-1@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-2@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-3@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-4@kubernetescrd,default-waltid-iam-keycloak-replacebodyregex-5@kubernetescrd
-      replaceBody:
-      # fixup for fiware, to work under correct path
-      - regex: accountURL\.host
-        replacement: accountURL.host + "/iam"
-        logLevel: -2
-        monitoring:
-          methods:
-          - GET
-          types:
-          - "*/*"
-          - text/javascript
-      # fixup for fiware, to make OIDC4VCI to work
-      - regex: (,)(")user_pin_required("):false
-        replacement:
-        logLevel: -2
-        monitoring:
-          methods:
-          - GET
-          types:
-          - "*/*"
-          - application/json
-      # fixup for fiware, to generate a correct credential offer according to OIDC4VCI
-      - regex: const credUrl = offerURI\.issuer
-        replacement: const credUrl = offerURI.issuer.replace(/https?/g,"openid-credential-offer")
-        logLevel: -2
-        monitoring:
-          methods:
-          - GET
-          types:
-          - "*/*"
-          - text/javascript
-      # fixup for fiware, to make OIDC4VCI to work
-      - regex: \"credentials":\[\{"type":"([^"]+)","format":"([^"]+)"[^}]*\}\]
-        replacement:  "\"credential_configuration_ids\":[\"${1}_${2}\"]"
-        monitoring:
-          methods:
-          - GET
-          types:
-          - "*/*"
-          - application/json
-      # Change reply from fiware openid-credential-issuer endpoint to the one expected by Walt.id.
-      # Include the token_endpoint and replace credentials_supported property with credential_configurations_supported
-      - regex: \"credentials_supported":\[\{\"format\":"([^"]+)",\"id":"([^"]+)",\"types":(\[[^\]]+\]),\"cryptographic_binding_methods_supported":(\[[^\]]+\]),\"cryptographic_suites_supported":(\[[^\]]+\])\}\]
-        replacement: "\"token_endpoint\":\"https://dataspace4health.local/iam/realms/ds4h/verifiable-credential/did:web:dataspace4health.local:wallet:api:wallet-api:registry:0/token\",\"credential_configurations_supported\":{\"${2}\":{\"format\":\"$1\",\"id\":\"${2}\",\"types\":${3},\"cryptographic_binding_methods_supported\":${4},\"cryptographic_suites_supported\":${5}}}"
-        logLevel: -2
-        monitoring:
-          methods:
-          - GET
-          types:
-          - "*/*"
-          - application/json
-      # Change the POST request made by Walt.id Wallet API to Fiware token endpoint.
-      # Replace pre-authorized_code with code.
-      - regex: pre\-authorized_code\=
-        replacement: "code="
-        logLevel: -2
-        monitoring:
-          methods:
-          - POST
-          types:
-          - application/x-www-form-urlencoded
       pathType: Prefix
       path: /iam
       extraTls:

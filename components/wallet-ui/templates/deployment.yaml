@@ -38,16 +38,6 @@ spec:
       - name: {{ template "app.chartname" . }}
         image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
-        command: ["bash", "-c"]
-        args:
-        - |
-          set -xe
-
-          #find public/_nuxt -type f -name "*.js" -print0 | xargs -0 sed -i '' -e 's|await \$fetch(`/wallet-api/wallet/${d.value}/exchange/useOfferRequest?did=${e}`,{method:"POST",body:y})|console.log("ANTONIO");await $fetch(`/wallet-api/wallet/${d.value}/exchange/useOfferRequest?did=${e}`,{method:"POST",body:`openid-credential-offer://?credential_offer=${n}`})|'
-          sed -i 's|await \$fetch(`/wallet-api/wallet/${d.value}/exchange/useOfferRequest?did=${e}`,{method:"POST",body:y})|console.log("ANTONIO");await $fetch(`/wallet-api/wallet/${d.value}/exchange/useOfferRequest?did=${e}`,{method:"POST",body:`openid-credential-offer://?credential_offer=${n}`})|' public/_nuxt/*.js
-          sed -i 's|await \$fetch(`/wallet-api/wallet/${g.value}/exchange/useOfferRequest?did=${a}`,{method:"POST",body:x})|console.log("ANTONIO");await $fetch(`/wallet-api/wallet/${d.value}/exchange/useOfferRequest?did=${a}`,{method:"POST",body:`openid-credential-offer://?credential_offer=${n}`})|' public/_nuxt/*.js
-
-          node server/index.mjs 
         {{- if .Values.useSecretRef }}
         envFrom:
           - secretRef:
