@@ -35,6 +35,7 @@ data:
     webPort = {{ .Values.config.http.port | quote }}
   oidc.conf: |
     publicBaseUrl = {{ .Values.config.oidc.publicBaseUrl | quote }}
+    enableOidcLogin = {{ .Values.config.oidc.enableOidcLogin | quote }}
     providerName = {{ .Values.config.oidc.providerName | quote }}
     oidcRealm = {{ .Values.config.oidc.oidcRealm | quote }}
     oidcJwks = {{ .Values.config.oidc.oidcJwks | quote }}
