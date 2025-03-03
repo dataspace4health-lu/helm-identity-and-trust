@@ -16,17 +16,11 @@ keycloak:
       
       JAVA_OPTS="-Djavax.net.ssl.trustStore=/tmp/truststores/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
       echo "Starting Keycloak"
-      JAVA_OPTS=${JAVA_OPTS} /opt/bitnami/scripts/keycloak/entrypoint.sh /opt/bitnami/scripts/keycloak/run.sh --features=preview
+      JAVA_OPTS=${JAVA_OPTS} /opt/bitnami/scripts/keycloak/entrypoint.sh /opt/bitnami/scripts/keycloak/run.sh 
   auth:
     adminUser: admin
     adminPassword: "xfsc4Ntt!"
-  extraEnvVars:
-    - name: KEYCLOAK_EXTRA_ARGS
-      value: "--import-realm"
-    - name: KC_FEATURES
-      value: token-exchange,admin-fine-grained-authz # required by Walt.Id Wallet API
-    - name: PROXY_ADDRESS_FORWARDING
-      value: "true"
+
   extraVolumeMounts:
     - name: config
       mountPath: "/opt/bitnami/keycloak/data/import/iam-realm.json"
