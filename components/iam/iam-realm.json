@@ -761,7 +761,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "**********",
+      "secret": "__DEFAULT_KEYCLOAK_CLIENT_SECRET__",
       "redirectUris": [
         "https://dataspace4health.local/wallet/*"
       ],

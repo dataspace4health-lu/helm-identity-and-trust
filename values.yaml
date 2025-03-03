@@ -303,7 +303,7 @@ wallet-api:
       logoutUrl: "${oidcRealm}/protocol/openid-connect/logout"
 
       clientId: "waltid_backend"
-      clientSecret: "**********"
+      clientSecret: "__DEFAULT_KEYCLOAK_CLIENT_SECRET__"
 
       # Keycloak authentication strategy
       keycloakUserApi: "https://dataspace4health.local/iam/admin/realms/ds4h/users"
