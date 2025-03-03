@@ -126,11 +126,12 @@ config:
         fullColumnNames: false
     recreateDatabaseOnStart: false
   oidc:
+    enableOidcLogin: true
     publicBaseUrl: "https://wallet-dev.walt.id"
     providerName: keycloak
     oidcRealm: "https://dataspace4health.local/iam/realms/ds4h"
     oidcJwks: "${oidcRealm}/protocol/openid-connect/certs"
-    oidcScopes: ["openid", "roles"]
+    oidcScopes: [ "roles"]
     authorizeUrl: "${oidcRealm}/protocol/openid-connect/auth"
     accessTokenUrl: "${oidcRealm}/protocol/openid-connect/token"
     logoutUrl: "${oidcRealm}/protocol/openid-connect/logout"
@@ -138,17 +139,17 @@ config:
     clientSecret: "__DEFAULT_KEYCLOAK_CLIENT_SECRET__"
     keycloakUserApi: "https://dataspace4health.local/iam/admin/realms/ds4h/users"
     jwksCache:
-      cacheSize: 10
+      cacheSize: 100
       cacheExpirationHours: 24
       rateLimit:
-        bucketSize: 10
-        refillRateMinutes: 1
+        bucketSize: 100
+        refillRateMinutes: 100
   auth:
     encryptionKey: "dncygwnvivxzlohc" # a 128 bit (16 chars) key
-    signKey: "jyjeylmidlylokzh" # a 128 bit (16 chars) key
+    signKey: "ihokOTbBUHelqm/Xv/WO/0F2CoeFiEXGoN9os56r/2g=" # a 128 bit (16 chars) key
     # Available Signing Algorithms are: RS256 or HS256.
     # If HS256, then provide the 256+ bit key in the tokenKey field. If RS256, then provide the private key in JWK format in the tokenKey field.
-    tokenKey: "hjklwcptiniwjkdwwkigreumcayoyiso" # at least 256 bit (32 chars)
+    tokenKey: "ihokOTbBUHelqm/Xv/WO/0F2CoeFiEXGoN9os56r/2g=" # at least 256 bit (32 chars)
     # Specify your iss and sub claims
     audTokenClaim: "https://dataspace4health.local"
     issTokenClaim: "https://dataspace4health.local"
