@@ -18,7 +18,7 @@ spec:
         command: ["sh", "-c"]
         args:
         - |
-          set -xe
+          set -e
           
           body=""
           code=0
@@ -120,7 +120,8 @@ spec:
 
           kid_jwk=$body
           kid_pub=$(echo $body | grep -m1 -oE '"x":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
-          # Format public key as expected by ssikit
+          
+          # Format public key as expected by Vault
           kid_pub="$(echo $kid_pub | awk '{gsub(/_/,"/",$1); gsub(/-/,"+",$1); print $1}')="
 
           #################################################
@@ -229,6 +230,10 @@ spec:
             PUBLIC_KEY_BASE64=$(base64 < /tmp/public_key.bin)
             # Clean up binary files
             rm -f /tmp/combined_key.bin /tmp/private_key.bin /tmp/public_key.bin
+
+            # Format back public and private keys as expected by SSI Kit
+            PUBLIC_KEY_BASE64="$(echo $PUBLIC_KEY_BASE64 | awk '{gsub(/\//,"_",$1); gsub(/\+/,"-",$1); gsub(/=$/,"",$1); print $1}')"
+            PRIVATE_KEY_BASE64="$(echo $PRIVATE_KEY_BASE64 | awk '{gsub(/\//,"_",$1); gsub(/\+/,"-",$1); gsub(/=$/,"",$1); print $1}')"
 
             #################################################
             # Import key
