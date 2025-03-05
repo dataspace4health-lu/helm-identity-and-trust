@@ -63,7 +63,7 @@ data:
         {{- range $index, $element := .Values.vault.server.args }}
           {{- if $element | regexMatch "-dev-root-token-id=.*" }}
             {{- $token := $element | regexFind "-dev-root-token-id=(.*)" }}
-            {{- $token := regexReplaceAll "-dev-root-token-id=(.*)" $token "$1" }} 
+            {{- $token := regexReplaceAll "-dev-root-token-id=(.*)" $token "$1" }}
         auth: {
           accessKey: {{ $token | quote }}
         }
@@ -78,12 +78,13 @@ data:
       }
       keyType: Ed25519
     }
+    defaultKeyConfig: {
+      backend: jwk
+      keyType: Ed25519
+    }
+    // Setup what DID should be generated based on above above defined key on registration
     defaultDidConfig: {
-      method: web
-      config: {
-        domain: {{ .Values.config.registrationDefaults.did.domain | quote }}
-        path: "{{ .Values.config.registrationDefaults.did.path }}/wallet-api/registry/[random-uuid]" // automatically generates random UUID for path
-      }
+      method: jwk
     }
     defaultIssuerConfig: {
       did: "did:web:{{ .Values.config.registrationDefaults.did.domain }}{{ .Values.config.registrationDefaults.did.path | replace "/" ":" }}:wallet-api:registry:0",
