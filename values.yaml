@@ -287,6 +287,7 @@ wallet-api:
     nameOverride: wallet-api-vault
     enabled: true
   config:
+    walletUiPath: /wallet/ui
     waltidCustodianUrl: http://waltid-issuer-api.default.svc.cluster.local:7002
     init:
       account:
