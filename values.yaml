@@ -149,7 +149,7 @@ iam:
            - dataspace4health.local
   clients:
   - realm: ds4h
-    realmAdminUser: testuser
+    realmAdminUser: admin
     realmAdminPass: xfsc4Ntt!
     issuers:
     - did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
