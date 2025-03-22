@@ -61,8 +61,6 @@ spec:
         envFrom:
           - configMapRef:
               name: {{ .Values.configMapName }}
-        {{- else }}
-        env:
         {{- end }}
         env:
           - name: WALTID_WALLET_UI_PATH

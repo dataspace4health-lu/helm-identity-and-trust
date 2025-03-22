@@ -107,6 +107,11 @@ spec:
             name: data-volume
           - mountPath: "/app/data/vc"
             name: data-volume
+          {{- range .Values.config.vcTemplates }}
+          - mountPath: "/app/data/vc-templates/{{ .name }}"
+            name: issuer-vc-template-{{ .name | lower }}
+            subPath: "{{ .name }}"
+          {{- end }}
           {{ $name := .Values.name }}
           {{- range .Values.ingress.tls }}
           - name: {{ .secretName | replace "." "-" }}
@@ -122,10 +127,15 @@ spec:
           items:
             - key: signatory.conf
               path: signatory.conf
-          name: "{{ template "app.chartname" . }}-configmap"
+          name: "{{ template "app.chartname" . }}-signatory"
       - name: data-volume
         persistentVolumeClaim:
           claimName: {{ template "app.chartname" . }}-data
+      {{- range .Values.config.vcTemplates }}
+      - name: issuer-vc-template-{{ .name | lower }}
+        configMap:
+          name: "{{ template "app.chartname" $ }}-vc-template-{{ .name | lower }}"
+      {{- end }}
       {{- range .Values.ingress.tls }}
       - name: {{ .secretName | replace "." "-" }}
         secret:

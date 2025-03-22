@@ -127,7 +127,7 @@ iam:
         defaultMode: 420
     httpRelativePath: "/iam/"
     logging:
-      level: "DEBUG,org.fiware:DEBUG"
+      level: "INFO,org.fiware:DEBUG"
     resources:
       limits:
         memory: "1Gi" # default 768Mi
@@ -154,11 +154,12 @@ iam:
     issuers:
     - did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
       supportedVCTypes:
-      - type: "LegalPerson"
+      - type: "NaturalPerson"
         format: "ldp_vc"
-      additionalClaims:
-      - vcType: "LegalPerson"
-        claims: "givenName,familyName,gender,birthDate,address"
+        claims: "firstName,familyName,email,roles"
+      claims:
+      - vcType: "NaturalPerson"
+        claims: "firstName,familyName,email,roles"
     identityProviders:
     - alias: waltid-idpkit
       displayName: "Login with SSI"
@@ -172,14 +173,17 @@ idp-api:
     persistance:
       size: 100Mi
     externalUrl: https://dataspace4health.local/idp
-    #verifierUiUrl: https://dataspace4health.local/verifier/ui
-    verifierApiUrl: https://dataspace4health.local/verifier/api/v1 # important! must be full url
+    verifierUiUrl: https://dataspace4health.local/idp/ui/sharecredential?state=
+    verifierApiUrl: https://dataspace4health.local/idp/api/siop/default  # important! must be full url
     walletUrl: /wallet/ui
   ingress:
     enabled: true
     hosts:
       - paths:
         # Prevent access to path /oidc/clients
+        - path: /idp/webjars
+          port: 8080
+          pathType: Prefix
         - path: /idp/api/swagger
           port: 8080
           pathType: Prefix
@@ -372,6 +376,30 @@ issuer-api:
     vault:
       url: http://waltid-wallet-api-vault-server-headless.default.svc.cluster.local:8200
       token: root
+    vcTemplates:
+    - name: NaturalPerson
+      value: |
+        {
+          "type": [
+            "VerifiableCredential",
+            "NaturalPerson"
+          ],
+          "@context": [
+            "https://www.w3.org/2018/credentials/v1"
+          ],
+          "id": "string",
+          "issuer": "string",
+          "issuanceDate": "timestamp",
+          "issued": "timestamp",
+          "validFrom": "timestamp",
+          "credentialSubject": {
+            "id": "string",
+            "firstName": "string",
+            "familyName": "string",
+            "email": "string",
+            "roles": "string"
+          }
+        }
     http:
       host: ""
       ports:
@@ -392,7 +420,7 @@ issuer-api:
         read: 10s
         write: 10s
   ingress:
-    enabled: true
+    enabled: false
     hosts:
       - paths:
         # - path: /core/api

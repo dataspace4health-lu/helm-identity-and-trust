@@ -88,15 +88,15 @@ spec:
         {{- end }}
           - name: http
             containerPort: {{ .Values.config.http.port }}   
-        # readinessProbe:
-        #   httpGet:
-        #     path: /livez
-        #     port: {{ .Values.config.http.port }}
-        #   initialDelaySeconds: 5
-        #   periodSeconds: 5
-        #   successThreshold: 2
-        #   failureThreshold: 2
-        #   timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: {{ .Values.config.http.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 2
+          failureThreshold: 2
+          timeoutSeconds: 5
         volumeMounts:
           {{ $name := .Values.name }}
           {{- range .Values.ingress.tls }}

@@ -50,8 +50,11 @@ spec:
               keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore ${JAVA_HOME}/lib/security/cacerts
             done
             
+            # Workaroud for IDP Kit not able to create this folder when resolvivng DID
+            mkdir -p ${WALTID_DATA_ROOT:-/waltid/idp}/data/tenants/VERIFIER/default
+
             echo "Starting IDP API"
-            JAVA_OPTS='-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG' /app/bin/waltid-idpkit run
+            JAVA_OPTS='-Dorg.slf4j.simpleLogger.log.id.walt=DEBUG' /app/bin/waltid-idpkit run
         {{- end }}
         {{- if .Values.useSecretRef }}
         envFrom:
@@ -84,15 +87,15 @@ spec:
         {{- end }}
           - name: http
             containerPort: {{ .Values.config.http.port }}   
-        # readinessProbe:
-        #   httpGet:
-        #     path: /livez
-        #     port: {{ .Values.config.http.port }}
-        #   initialDelaySeconds: 5
-        #   periodSeconds: 5
-        #   successThreshold: 2
-        #   failureThreshold: 2
-        #   timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/swagger
+            port: {{ .Values.config.http.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 2
+          failureThreshold: 2
+          timeoutSeconds: 5
         volumeMounts:
           - name: idp-config
             mountPath: "/waltid/idp/config/"
