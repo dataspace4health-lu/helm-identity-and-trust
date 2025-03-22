@@ -66,12 +66,12 @@ data:
       "additionalPolicies": [
       ],
       "wallets": {
-        "walt.id": {
-          "id": "walt.id",
+        "local": {
+          "id": "local",
           "url": "{{ .Values.config.walletUrl }}",
           "presentPath": "api/siop/initiatePresentation/",
           "receivePath" : "api/siop/initiateIssuance/",
-          "description": "walt.id web wallet"
+          "description": "Local web wallet"
         }
       }
     }
