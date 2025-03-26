@@ -19,7 +19,7 @@ docker rm -f playwright
 endef
 
 SUBDIRS := $(wildcard components/*/.)
-CURRENT_DIR := waltid# $(shell echo $(notdir $(shell pwd)) | tr '[:upper:]' '[:lower:]')
+CURRENT_DIR := iat# $(shell echo $(notdir $(shell pwd)) | tr '[:upper:]' '[:lower:]')
 
 .PHONY: all build $(SUBDIRS) install test uninstall clean
 
