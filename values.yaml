@@ -80,7 +80,7 @@ iam:
     - name: KC_FEATURES
       value: token-exchange,admin-fine-grained-authz # required by Walt.Id Wallet API
     - name: VCISSUER_WALTID_ADDRESS
-      value: http://waltid-issuer-api.default.svc.cluster.local
+      value: http://iat-issuer-api.default.svc.cluster.local
     - name: VCISSUER_ISSUER_DID
       value: did:web:dataspace4health.local:wallet:api:wallet-api:registry:0
     - name: VCISSUER_ISSUER_KEY_FILE
@@ -105,13 +105,13 @@ iam:
     extraVolumes:
     - name: config
       configMap:
-        name: waltid-iam-keycloak-configmap
+        name: iat-iam-keycloak-configmap
         items:
         - key: "iam-realm.json"
           path: "iam-realm.json"
     - name: extra-config
       configMap:
-        name: waltid-iam-extra-configmap
+        name: iat-iam-extra-configmap
         items:
         - key: "keyfile.json"
           path: "keyfile.json"
@@ -165,8 +165,8 @@ iam:
       displayName: "Login with SSI"
       clientName: keycloak
       oidcDiscoveryUrl: https://dataspace4health.local/idp/api/oidc/.well-known/openid-configuration
-      clientRegisterUrl: http://waltid-idp-api.default.svc.cluster.local:8080/api/oidc/clients/register
-      redirectUri: https://dataspace4health.local/iam/realms/master/broker/waltid-idpkit/endpoint
+      clientRegisterUrl: http://iat-idp-api.default.svc.cluster.local:8080/api/oidc/clients/register
+      redirectUri: https://dataspace4health.local/iam/realms/master/broker/iat-idpkit/endpoint
 idp-api:
   nameOverride: idp-api
   config:
@@ -288,7 +288,7 @@ wallet-api:
     enabled: true
   config:
     walletUiPath: /wallet/ui
-    waltidCustodianUrl: http://waltid-issuer-api.default.svc.cluster.local:7002
+    waltidCustodianUrl: http://iat-issuer-api.default.svc.cluster.local:7002
     init:
       account:
         name: "NTT Data"
@@ -365,7 +365,7 @@ issuer-api:
     persistance:
       size: 100Mi
     wallet:
-      url: "http://waltid-wallet-api.default.svc.cluster.local:8080"
+      url: "http://iat-wallet-api.default.svc.cluster.local:8080"
       account:
         email: "wallet@ntt.com"
         pass: "xfsc4Ntt!"
@@ -374,7 +374,7 @@ issuer-api:
       proofType: "LD_PROOF"
       templatesFolder: "data/credential-store/templates"
     vault:
-      url: http://waltid-wallet-api-vault-server-headless.default.svc.cluster.local:8200
+      url: http://iat-wallet-api-vault-server-headless.default.svc.cluster.local:8200
       token: root
     vcTemplates:
     - name: NaturalPerson
