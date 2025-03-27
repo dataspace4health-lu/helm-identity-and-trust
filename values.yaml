@@ -105,13 +105,13 @@ iam:
     extraVolumes:
     - name: config
       configMap:
-        name: waltid-iam-keycloak-configmap
+        name: iat-iam-keycloak-configmap
         items:
         - key: "iam-realm.json"
           path: "iam-realm.json"
     - name: extra-config
       configMap:
-        name: waltid-iam-extra-configmap
+        name: iat-iam-extra-configmap
         items:
         - key: "keyfile.json"
           path: "keyfile.json"
