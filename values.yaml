@@ -161,12 +161,12 @@ iam:
       - vcType: "NaturalPerson"
         claims: "firstName,familyName,email,roles"
     identityProviders:
-    - alias: waltid-idpkit
+    - alias: iat-idpkit
       displayName: "Login with SSI"
       clientName: keycloak
       oidcDiscoveryUrl: https://dataspace4health.local/idp/api/oidc/.well-known/openid-configuration
       clientRegisterUrl: http://iat-idp-api.default.svc.cluster.local:8080/api/oidc/clients/register
-      redirectUri: https://dataspace4health.local/iam/realms/master/broker/iat-idpkit/endpoint
+      redirectUri: https://dataspace4health.local/iam/realms/ds4h/broker/iat-idpkit/endpoint
 idp-api:
   nameOverride: idp-api
   config:
