@@ -56,8 +56,6 @@ iam:
         keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore /tmp/truststores/cacerts
       done
 
-      #echo "Download FIWARE VC Issuer provider"
-      #curl -sLS https://github.com/FIWARE/keycloak-vc-issuer/releases/download/1.0.3/vc-issuer-1.0.3.jar -o /opt/bitnami/keycloak/providers/vc-issuer-1.0.3.jar
       cp /opt/bitnami/keycloak/custom_providers/vc-issuer.jar /opt/bitnami/keycloak/providers/
       cp /opt/bitnami/keycloak/custom_providers/WaltID-ServiceMatrix-*.jar /opt/bitnami/keycloak/providers/
       cp /opt/bitnami/keycloak/custom_providers/waltid*.jar /opt/bitnami/keycloak/providers/
@@ -77,8 +75,6 @@ iam:
       value: "--import-realm"
     - name: PROXY_ADDRESS_FORWARDING
       value: "true"
-    - name: KC_FEATURES
-      value: token-exchange,admin-fine-grained-authz # required by Walt.Id Wallet API
     - name: VCISSUER_WALTID_ADDRESS
       value: http://iat-issuer-api.default.svc.cluster.local
     - name: VCISSUER_ISSUER_DID
