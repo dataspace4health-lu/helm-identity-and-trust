@@ -72,6 +72,7 @@ service:
 config:     
   persistance:
     size: 100Mi
+  REDIRECT_URI: "openid://dataspace4health.local/wallet/ui"
   externalUrl: https://dataspace4health.local/idp
   #verifierUiUrl: https://dataspace4health.local/verifier/ui
   verifierApiUrl: https://dataspace4health.local/verifier/api/v1 # important! must be full url
