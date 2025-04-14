@@ -174,7 +174,7 @@ spec:
                 \"clientAuthMethod\": \"client_secret_basic\",
                 \"clientId\": \"${client_id}\",
                 \"clientSecret\": \"${client_secret}\",
-                \"defaultScope\": \"openid profile\"
+                \"defaultScope\": \"{{ .defaultScope }}\"
               }
             }" \
             "${keycloak_url}admin/realms/{{ $realm }}/identity-provider/instances")

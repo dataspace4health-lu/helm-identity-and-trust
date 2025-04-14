@@ -122,6 +122,9 @@ ingress:
       - path: /idp/api/oidc/web-api
         port: 8080
         pathType: Prefix
+      - path: /idp/api/oidc/userInfo
+        port: 8080
+        pathType: Prefix
       - path: /idp/api/nft
         port: 8080
         pathType: Prefix
