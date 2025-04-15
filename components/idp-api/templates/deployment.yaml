@@ -66,8 +66,6 @@ spec:
               name: {{ .Values.configMapName }}
         {{- else }}
         env:
-        - name: REDIRECT_URI
-          value: "{{ .Values.config.REDIRECT_URI }}"
         - name: WALTID_DATA_ROOT
           value: "/waltid/idp"
         {{- end }}
