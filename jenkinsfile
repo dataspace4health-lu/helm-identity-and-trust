@@ -33,14 +33,10 @@ pipeline {
                     // Package charts 
                     sh 'make build'
                     def testsDirExists = sh(script: "if [ -d tests ]; then echo 'exists'; else echo 'not exists'; fi", returnStdout: true).trim()
-                    if (testsDirExists == 'exists') {
-                        // Create cluster
-                        def cluster = createCluster()
-                        // Perform root tests
-                        mainTest(cluster)
-                    } else {
-                        sh("echo No tests directory found in the main")
-                    }
+                    // Create cluster
+                    def cluster = createCluster()
+                    // Perform root tests
+                    mainTest(cluster)
                     def version = get_version()
                     def latest_tag = get_latest_tag()
                     if (latest_tag == version) {
@@ -212,6 +208,11 @@ def createCluster(){
 
 def mainTest(cluster) {
     sh "kubectl wait --for=condition=Ready pods --all --timeout=600s"
+    def testsDirExists = sh(script: "if [ -d tests ]; then echo 'exists'; else echo 'not exists'; fi", returnStdout: true).trim()
+    if (testsDirExists != 'exists') {
+        sh("echo No tests directory found in the main")
+        return
+    }
     def time = sh(script: 'date "+%Y.%m.%d-%H.%M.%S"', returnStdout: true).trim()
     def name = "jenkins-playwrite-${cluster.name}"
     sh """
