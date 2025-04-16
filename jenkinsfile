@@ -32,22 +32,6 @@ pipeline {
                 script {
                     // Package charts 
                     sh 'make build'
-                    def parentDir = 'components'
-                    // Get the list of subdirectories
-                    def subDirs = sh(script: "ls -d ${parentDir}/*/", returnStdout: true).trim().split('\n')
-                    subDirs.each { subDir ->
-                        def testsDirExists = sh(script: "if [ -d ${subDir}/tests ]; then echo 'exists'; else echo 'not exists'; fi", returnStdout: true).trim()
-                        
-                        if (testsDirExists == 'exists') {
-                            echo "Directory ${subDir} contains a 'tests' directory."
-                            // perform single component tests
-                            // create cluster if not exists 
-                            // sh("cd ${subDir} && make test ....")
-                        } else {
-                            echo "Directory ${subDir} does not contain a 'tests' directory."
-                        }
-                    }
-                                
                     def testsDirExists = sh(script: "if [ -d tests ]; then echo 'exists'; else echo 'not exists'; fi", returnStdout: true).trim()
                     if (testsDirExists == 'exists') {
                         // Create cluster
