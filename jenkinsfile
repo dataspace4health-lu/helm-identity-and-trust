@@ -202,7 +202,7 @@ def createCluster(){
     sh "kubectl wait --for=condition=Ready certificate/${env.DNS_NAME} --timeout=300s"
     def version = get_version()
     def name = get_name()
-    sh "helm install fc-protal-app ./helm/${name}-${version}.tgz -f jenkins-files/values.yaml"
+    sh "helm install identity-and-trust ./helm/${name}-${version}.tgz -f jenkins-files/values.yaml"
     return cluster
 }
 
