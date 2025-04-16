@@ -32,26 +32,24 @@ pipeline {
                 script {
                     // Package charts 
                     sh 'make build'
-                    def parentDir = new File('components')
-                    // Ensure the parent directory exists
-                    if (parentDir.exists() && parentDir.isDirectory()) {
-                        parentDir.eachDir { subDir ->
-                            def testsDir = new File(subDir, 'tests')
-                            if (testsDir.exists() && testsDir.isDirectory()) {
-                                echo "Directory ${subDir} contains a 'tests' directory."
-                                // perform single component tests
-                                // create cluster if not exists 
-                                // sh("cd ${subDir} && make test ....")
-                            } else {
-                                echo "Directory ${subDir} does not contain a 'tests' directory."
-                            }
+                    def parentDir = 'components'
+                    // Get the list of subdirectories
+                    def subDirs = sh(script: "ls -d ${parentDir}/*/", returnStdout: true).trim().split('\n')
+                    subDirs.each { subDir ->
+                        def testsDirExists = sh(script: "if [ -d ${subDir}/tests ]; then echo 'exists'; else echo 'not exists'; fi", returnStdout: true).trim()
+                        
+                        if (testsDirExists == 'exists') {
+                            echo "Directory ${subDir} contains a 'tests' directory."
+                            // perform single component tests
+                            // create cluster if not exists 
+                            // sh("cd ${subDir} && make test ....")
+                        } else {
+                            echo "Directory ${subDir} does not contain a 'tests' directory."
                         }
-                    } else {
-                        echo "Parent components directory does not exist or is not a directory."
                     }
                                 
-                    def dir = new File('tests')
-                    if (dir.exists() && dir.isDirectory()) {
+                    def testsDirExists = sh(script: "if [ -d tests ]; then echo 'exists'; else echo 'not exists'; fi", returnStdout: true).trim()
+                    if (testsDirExists == 'exists') {
                         // Create cluster
                         def cluster = createCluster()
                         // Perform root tests
@@ -125,10 +123,11 @@ pipeline {
                 script {
                     def version = get_version()
                     def latestCommit = sh(script: "git rev-parse HEAD", returnStdout: true).trim()
-                    sh "git tag ${version} ${latestCommit}"
-                    sh "git push origin ${version}"
                     // publish helm chart
                     sh "helm push helm/*.tgz oci://${registery_domain}/helm"
+                    // tag git repo
+                    sh "git tag ${version} ${latestCommit}"
+                    sh "git push origin ${version}"
                     sh('az logout')
                 }
             }
@@ -150,6 +149,11 @@ pipeline {
 def get_version(){
     def version = sh(script: "yq '.version' Chart.yaml -r", returnStdout: true).trim()
     return version
+}
+
+def get_name() {
+    def name = sh(script: "yq '.name' Chart.yaml -r", returnStdout: true).trim()
+    return name
 }
 
 def get_latest_tag() {
@@ -217,7 +221,7 @@ def createCluster(){
     sh "kubectl apply -f jenkins-files/certificate.yaml"
     sh "kubectl wait --for=condition=Ready certificate/${env.DNS_NAME} --timeout=300s"
     def version = get_version()
-    def name = sh(script: "yq '.name' Chart.yaml -r", returnStdout: true).trim()
+    def name = get_name()
     sh "helm install fc-protal-app ./helm/${name}-${version}.tgz -f jenkins-files/values.yaml"
     return cluster
 }
