@@ -202,12 +202,15 @@ def createCluster(){
     sh "kubectl wait --for=condition=Ready certificate/${env.DNS_NAME} --timeout=300s"
     def version = get_version()
     def name = get_name()
-    sh "helm install identity-and-trust ./helm/${name}-${version}.tgz -f jenkins-files/values.yaml"
+    // sh "helm install identity-and-trust ./helm/${name}-${version}.tgz -f jenkins-files/values.yaml"
+    sh """
+    make install override_values="-f jenkins-files/values.yaml"
+    """
     return cluster
 }
 
 def mainTest(cluster) {
-    sh "kubectl wait --for=condition=Ready pods --all --timeout=600s"
+    sh "kubectl wait --for=condition=Ready pods --all --timeout=3600s"
     def testsDirExists = sh(script: "if [ -d tests ]; then echo 'exists'; else echo 'not exists'; fi", returnStdout: true).trim()
     if (testsDirExists != 'exists') {
         sh("echo No tests directory found in the main")

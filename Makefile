@@ -1,13 +1,14 @@
 timestamp ?= $(shell date "+%Y.%m.%d-%H.%M.%S")
+name ?= "playwright"
+network ?= bridge
+dns_cmd ?=
+override_values ?= 
 
 define build =
 helm dependency update
 helm package . -d helm
 endef
 
-name ?= "playwright"
-network ?= bridge
-dns_cmd ?=
 define test =
 mkdir -p tests/results/${timestamp}
 docker run -d -t --name $(name) --network $(network) --ipc=host mcr.microsoft.com/playwright:v1.46.1
@@ -37,7 +38,7 @@ $(SUBDIRS):
 	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 install:
-	helm install $(CURRENT_DIR) helm/*.tgz
+	helm install $(CURRENT_DIR) helm/*.tgz $(override_values)
 
 test:
 	$(test)
