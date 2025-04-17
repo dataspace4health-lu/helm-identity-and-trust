@@ -180,9 +180,7 @@ def createCluster(){
     done
     """
     sh """
-    kubectl -n kube-system get cm coredns -o yaml | \
-    sed 's#NodeHosts: |#NodeHosts: |\\n    ${cluster.server_ip} ${env.DNS_NAME}#' | \
-    kubectl apply -f -
+    kubectl -n kube-system get cm coredns -o yaml | sed 's#NodeHosts: |#NodeHosts: |\n    ${cluster.server_ip} ${env.DNS_NAME}#' | kubectl apply -f -
     """
     withCredentials([
         string(credentialsId: 'app_id', variable: 'APP_ID'),

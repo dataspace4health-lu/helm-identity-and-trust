@@ -1,7 +1,5 @@
 iam: 
   keycloak:
-    imagePullSecrets: 
-      - name: acr-creds
     initContainers:
     - name: iam-keycloak-init
       image: curlimages/curl:latest
@@ -25,7 +23,6 @@ iam:
           }
           wait-for-url ${url}
     - name: iam-keycloak-vc-issuer-init
-      #image: quay.io/fiware/keycloak-vc-issuer:1.0.3
       image: dh4sdev.azurecr.io/keycloak-vc-issuer:0.0.1
       imagePullPolicy: Always
       volumeMounts:
