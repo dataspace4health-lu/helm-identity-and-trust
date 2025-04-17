@@ -179,9 +179,6 @@ def createCluster(){
         sleep 5
     done
     """
-    sh """
-    kubectl -n kube-system get cm coredns -o yaml | sed 's#NodeHosts: |#NodeHosts: |\n    ${cluster.server_ip} ${env.DNS_NAME}#' | kubectl apply -f -
-    """
     withCredentials([
         string(credentialsId: 'app_id', variable: 'APP_ID'),
         string(credentialsId: 'sp_password', variable: 'SP_PASSWORD'),
@@ -198,6 +195,9 @@ def createCluster(){
     sh "kubectl apply -f jenkins-files/issuer.yaml"
     sh "kubectl apply -f jenkins-files/certificate.yaml"
     sh "kubectl wait --for=condition=Ready certificate/${env.DNS_NAME} --timeout=300s"
+    sh """
+    kubectl -n kube-system get cm coredns -o yaml | sed 's#NodeHosts: |#NodeHosts: |\\n    ${cluster.server_ip} ${env.DNS_NAME}#' | kubectl apply -f -
+    """
     def version = get_version()
     def name = get_name()
     // sh "helm install identity-and-trust ./helm/${name}-${version}.tgz -f jenkins-files/values.yaml"

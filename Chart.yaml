@@ -14,10 +14,6 @@ version: 1.0.0
 # It is recommended to use it with quotes.
 appVersion: "1.0.0"
 
-
-imagePullSecrets:
-  - name: acr-creds
-
 dependencies:
   - name: iam
     version: 1.0.0

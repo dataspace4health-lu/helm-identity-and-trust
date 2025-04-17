@@ -1,5 +1,8 @@
 iam: 
   keycloak:
+    image: 
+      pullSecrets: 
+      - name: acr-creds
     initContainers:
     - name: iam-keycloak-init
       image: curlimages/curl:latest
