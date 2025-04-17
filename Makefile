@@ -1,21 +1,25 @@
-timestamp = $(shell date "+%Y.%m.%d-%H.%M.%S")
+timestamp ?= $(shell date "+%Y.%m.%d-%H.%M.%S")
 
 define build =
 helm dependency update
 helm package . -d helm
 endef
 
+name ?= "playwright"
+network ?= bridge
+dns_cmd ?=
 define test =
 mkdir -p tests/results/${timestamp}
-docker run -d -t --name playwright --ipc=host mcr.microsoft.com/playwright:v1.46.1
-docker exec playwright bash -c "mkdir -p app/tests"
-docker cp tests playwright:/app
--docker exec playwright bash -c "cd /app/tests && export CI=1 && npm i --silent && npx -y playwright test --output ./results"
+docker run -d -t --name $(name) --network $(network) --ipc=host mcr.microsoft.com/playwright:v1.46.1
+$(dns_cmd)
+docker exec $(name) bash -c "mkdir -p app/tests"
+docker cp tests $(name):/app
+-docker exec $(name) bash -c "cd /app/tests && export CI=1 && npm i --silent && npx -y playwright test --output ./results"
 if [ $$? -eq 0 ]; then \
-	docker cp playwright:/app/tests/results/ tests/results/${timestamp}/traces; \
-	docker cp playwright:/app/tests/playwright-report/ tests/results/${timestamp}/report; \
+	docker cp $(name):/app/tests/results/ tests/results/${timestamp}/traces; \
+	docker cp $(name):/app/tests/playwright-report/ tests/results/${timestamp}/report; \
 fi
-docker rm -f playwright
+docker rm -f $(name)
 endef
 
 SUBDIRS := $(wildcard components/*/.)
