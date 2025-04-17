@@ -167,7 +167,7 @@ def createCluster(){
     def cluster = [:]
     def random = UUID.randomUUID().toString().take(10)
     cluster.name = "jenkins-${random}"
-    sh "k3d cluster create ${cluster.name} --servers 1 --no-lb --kubeconfig-update-default=false --kubeconfig-switch-context=false"
+    sh "k3d cluster create ${cluster.name} --servers 1 --agents 3 --no-lb --kubeconfig-update-default=false --kubeconfig-switch-context=false"
     writeFile file: 'cluster_name.txt', text: cluster.name
     sh "k3d kubeconfig get ${cluster.name} > ${env.KUBECONFIG}"
     sh "chmod 600 ${env.KUBECONFIG}"
