@@ -1,9 +1,9 @@
-idp-ui:
-  image:
-    repository: dh4sdev.azurecr.io
-    name: walletid-idpkit
-    tag: "0.0.1"
-    pullSecrets: acr-creds
+# idp-ui:
+#   image:
+#     repository: dh4sdev.azurecr.io
+#     name: walletid-idpkit
+#     tag: "0.0.1"
+#     pullSecrets: acr-creds
 
 issuer-api:
   image:
