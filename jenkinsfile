@@ -38,8 +38,7 @@ pipeline {
                     // Perform root tests
                     mainTest(cluster)
                     def version = get_version()
-                    def latest_tag = get_latest_tag()
-                    if (latest_tag == version) {
+                    if (tagExists(version)) {
                         env.exit = "true"
                         echo "Version not changed. Pipeline exit."
                     }
@@ -136,14 +135,10 @@ def get_name() {
     return name
 }
 
-def get_latest_tag() {
+def tagExists(String version) {
     sh "git fetch --tags"
-    def latest_tag = sh(script: "git for-each-ref --sort=-creatordate --format '%(refname:strip=2)' refs/tags | head -n 1", returnStdout: true).trim()
-    if(latest_tag) {
-        return latest_tag
-    } else {
-       return null
-    }
+    def existingTags = sh(script: "git tag", returnStdout: true).trim().split('\n')
+    return existingTags.contains(version)
 }
 
 def getCredential(id) {
@@ -208,7 +203,18 @@ def createCluster(){
 }
 
 def mainTest(cluster) {
-    sh "kubectl wait --for=condition=Ready pods --all --timeout=3600s"
+    int retries = 10
+    int interval = 60
+    for (int i = 0; i < retries; i++) {
+        echo "Attempt ${i + 1} of ${retries}..."
+        try {
+            sh "kubectl wait --for=condition=Ready pods --all --timeout=${interval}s"
+            echo "All pods are ready!"
+            break
+        } catch (err) {
+            echo "Attempt ${i + 1}, pods not ready"
+        }
+    }
     def testsDirExists = sh(script: "if [ -d tests ]; then echo 'exists'; else echo 'not exists'; fi", returnStdout: true).trim()
     if (testsDirExists != 'exists') {
         sh("echo No tests directory found in the main")
