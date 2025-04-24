@@ -1,7 +1,11 @@
 timestamp ?= $(shell date "+%Y.%m.%d-%H.%M.%S")
+# playwright contianer name
 name ?= "playwright"
+# playwright docker network
 network ?= bridge
+# configure core dns
 dns_cmd ?=
+# helm package values file: -f filename
 override_values ?= 
 
 define build =
@@ -38,7 +42,7 @@ $(SUBDIRS):
 	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 install:
-	helm install $(CURRENT_DIR) helm/*.tgz $(override_values)
+	helm install $(CURRENT_DIR) $(shell ls helm/*.tgz) $(override_values)
 
 test:
 	$(test)

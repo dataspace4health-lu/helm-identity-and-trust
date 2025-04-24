@@ -2,121 +2,99 @@
 pipeline {
     environment {
         GIT_SSH_COMMAND = 'ssh -i key'
-        AZURE_CONFIG_DIR = "${env.WORKSPACE}/tmp/azure"
         KUBECONFIG_DIR = "${env.WORKSPACE}/tmp"
         KUBECONFIG = "${env.KUBECONFIG_DIR}/kube.yaml"
-        GIT_REPO = "git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/helm-identity-and-trust"
         DNS_NAME = 'dataspace4health.local'
-        HOST_PATH = '/home/jenkins/host'
+        HELM_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/helm-identity-and-trust'
+        VC_ISSUER_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/keycloak-vc-issuer'
+        WALTID_IDPKIT_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/waltid-idpkit'
+        WALT_IDENTITY_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/waltid-identity'
+        BRANCH_NAME = 'jenkins'
+        FALLBACK_BRANCH = 'main'
+        REGISTRY = 'localhost:5000'
+        REGISTRY_NAME = 'k3d-registry.localhost:5000'
     }
-    parameters {
-        string(name: "registery", description: "Azure Container Registery Name", defaultValue: "dh4sdev")
-        string(name: "registery_domain", description: "Azure Container Registery domaine name", defaultValue: "dh4sdev.azurecr.io")
-    }
+
     agent {label 'worker'}
+
     stages {
-        stage("Clone Remote Repository") {
+        stage("Setup git and kubectl access") {
             steps {
-                git credentialsId: 'azure-devops', branch: 'jenkins', url: env.GIT_REPO
-                withCredentials([sshUserPrivateKey(credentialsId: 'azure-devops', keyFileVariable: 'SSH_KEY')]) {
-                    sh('cp "$SSH_KEY" key')
-                    sh('chmod 400 key')
+                script {
+                    // setup git permissions
+                    withCredentials([sshUserPrivateKey(credentialsId: 'azure-devops', keyFileVariable: 'SSH_KEY')]) {
+                        sh('cp "$SSH_KEY" key')
+                        sh('chmod 400 key')
+                    }
+                    // create kubeconfig dir
+                    sh "mkdir -p $KUBECONFIG_DIR"
                 }
-                sh "mkdir -p $KUBECONFIG_DIR"
-                sh "mkdir -p $AZURE_CONFIG_DIR"
+            }
+        }
+
+        stage("Build VC Issuer Image") {
+            steps {
+                script {
+                    buildVCIssuerImage()
+                }
+            }
+        }
+
+        stage("Build Wallet Identity UI and API Images") {
+            steps {
+                script {
+                    buildWaltidImages()
+                }
             }
         }
 
         stage("Create K3d Cluster and Test") {
             steps {
                 script {
-                    // Package charts 
-                    sh 'make build'
-                    def testsDirExists = sh(script: "if [ -d tests ]; then echo 'exists'; else echo 'not exists'; fi", returnStdout: true).trim()
-                    // Create cluster
-                    def cluster = createCluster()
-                    // Perform root tests
-                    mainTest(cluster)
-                    def version = get_version()
-                    if (tagExists(version)) {
-                        env.exit = "true"
-                        echo "Version not changed. Pipeline exit."
-                    }
-                }
-            }
-        }
-
-        stage ("Ask User Validation") {
-            when {
-                expression {
-                    return env.exit != "true"
-                }
-            }
-            steps {
-                script {
-                    def response = input(
-                        id: 'test', 
-                        message: "Do you want to push the chart with The test results",
-                        parameters: [
-                            [$class: 'ChoiceParameterDefinition', 
-                                choices: "No\nYes", 
-                                description: "Checkout the test report of the federated catalog, you find the report on the side bar",
-                                name: workspace]
+                    // clone helm repo
+                    cloneRepo(env.HELM_REPO, 'helm-identity-and-trust')
+                    dir('helm-identity-and-trust') {
+                        // override the values 
+                        def values = [
+                            '(.iam.keycloak.initContainers[] | select(.name == "iam-keycloak-vc-issuer-init")).image': "${env.REGISTRY_NAME}/${env.vc_issuer_image_name}:${env.vc_issuer_image_tag}", 
+                            '.iam.keycloak.image.pullSecrets': '[]', 
+                            '.wallet-ui.image.repository' : "${env.REGISTRY_NAME}/${env.walletid_ui_image_name}", 
+                            '.wallet-ui.image.tag' : "${env.walletid_ui_image_tag}",
+                            '.wallet-ui.image.pullSecrets' : "", 
+                            '.wallet-api.image.repository' : "${env.REGISTRY_NAME}/${env.walletid_api_image_name}", 
+                            '.wallet-api.image.tag' : "${env.walletid_ui_image_tag}", 
+                            '.wallet-api.image.pullSecrets' : "", 
                         ]
-                    )
-                    if (response == "No") {
-                        env.exit = "true"
-                        echo "User not satisfied with the tests. Pipeline exit."
+                        override_values(values, 'jenkins-files/values.yaml')
+                        sh('cat jenkins-files/values.yaml')
+                        // Package charts 
+                        sh 'make build'
+                        // Create cluster
+                        def cluster = createCluster()
+                        // Perform tests
+                        mainTest(cluster)
                     }
                 }
             }
         }
 
-        stage ("Azure Login"){
-            when {
-                expression {
-                    return env.exit != "true"
-                }
-            }
-            steps {
-                withCredentials([
-                    string(credentialsId: 'app_id', variable: 'APP_ID'),
-                    string(credentialsId: 'sub_id', variable: 'SUB_ID'), 
-                    string(credentialsId: 'tenant_id', variable: 'TENANT_ID'), 
-                    string(credentialsId: 'sp_password', variable: 'SP_PASSWORD'),
-                ]) {
-                    sh('az login --service-principal --username $APP_ID --password $SP_PASSWORD --tenant $TENANT_ID')
-                    sh('az account set --subscription $SUB_ID')
-                    sh("az acr login --name ${params.registery}")
-                }
-            }
-        }
-
-        stage ("Tag Remote Repository and publish helm chart") {
-            when {
-                expression {
-                    return env.exit != "true"
-                }
-            }
+        stage("Clean Up") {
             steps {
                 script {
-                    def version = get_version()
-                    def latestCommit = sh(script: "git rev-parse HEAD", returnStdout: true).trim()
-                    // publish helm chart
-                    sh "helm push helm/*.tgz oci://${registery_domain}/helm"
-                    // tag git repo
-                    sh "git tag ${version} ${latestCommit}"
-                    sh "git push origin ${version}"
-                    sh('az logout')
+                    sh "docker rmi ${REGISTRY}/${env.vc_issuer_image_name}:${env.vc_issuer_image_tag}"
+                    sh "docker rmi ${env.vc_issuer_image_name}:${env.vc_issuer_image_tag}"
+                    sh "docker rmi ${REGISTRY}/${env.walletid_ui_image_name}:${env.walletid_ui_image_tag}"
+                    sh "docker rmi ${env.walletid_ui_image_name}:${env.walletid_ui_image_tag}"
                 }
             }
         }
     }
+
     post {
         always {
             script {
-                if (fileExists('cluster_name.txt')) {
-                    def clusterName = readFile('cluster_name.txt').trim()
+                if (fileExists('helm-identity-and-trust/cluster_name.txt')) {
+                    def clusterName = readFile('helm-identity-and-trust/cluster_name.txt').trim()
                     sh "k3d cluster delete ${clusterName}"
                 }
                 cleanWs()
@@ -125,44 +103,75 @@ pipeline {
     }
 }
 
-def get_version(){
-    def version = sh(script: "yq '.version' Chart.yaml -r", returnStdout: true).trim()
-    return version
+def cloneRepo(repo, name) {
+    // Check if the branch exists remotely
+    def branchExists = sh(
+        script: "git ls-remote --heads ${repo} ${env.BRANCH_NAME}",
+        returnStatus: true
+    ) == 0
+    def branchToUse = branchExists ? env.BRANCH_NAME : env.FALLBACK_BRANCH
+    echo "Using branch: ${branchToUse} for ${name}"
+    // clone and checkout using the branch
+    sh "git clone --branch ${branchToUse} ${repo} ${name}"
 }
 
-def get_name() {
-    def name = sh(script: "yq '.name' Chart.yaml -r", returnStdout: true).trim()
-    return name
-}
-
-def tagExists(String version) {
-    sh "git fetch --tags"
-    def existingTags = sh(script: "git tag", returnStdout: true).trim().split('\n')
-    return existingTags.contains(version)
-}
-
-def getCredential(id) {
-    def credential = 'None'
-    try {
-        withCredentials([string(credentialsId: id, variable: 'TEMP_CREDENTIAL')]) {
-            if (TEMP_CREDENTIAL) {
-                credential = TEMP_CREDENTIAL
-                echo "Credential ${id} is set."
-            } else {
-                echo "Credential ${id} is not set, falling back to empty string."
-            }
-        }
-    } catch (Exception e) {
-        echo "Credential ${id} not found or an error occurred, falling back to empty string."
+def buildVCIssuerImage() {
+    cloneRepo(env.VC_ISSUER_REPO, 'vc-issuer')
+    // switch to the vc issuer repo and build the image
+    dir('vc-issuer') {
+        // Build UI
+        def random = UUID.randomUUID().toString()
+        def randomImageName = "jenkins-generated-image-vcissuer:${random}"
+        env.vc_issuer_image_name = "jenkins-generated-image-vcissuer"
+        env.vc_issuer_image_tag = random
+        sh "docker build -t ${randomImageName} -f deploy/Dockerfile-init ."
+        sh "docker tag ${randomImageName} ${env.REGISTRY}/${randomImageName}"
+        sh "docker push ${env.REGISTRY}/${randomImageName}"
     }
-    return credential
+}
+
+def buildWaltidImages() {
+    cloneRepo(env.WALT_IDENTITY_REPO, 'walletid')
+    // switch to the wallet identity repo and build the image
+    dir('walletid') {
+        // Build UI
+        def random = UUID.randomUUID().toString()
+        def randomImageName = "jenkins-generated-image-walletidui:${random}"
+        env.walletid_ui_image_name = "jenkins-generated-image-walletidui"
+        env.walletid_ui_image_tag = random
+        sh "docker build -t ${randomImageName} -f waltid-applications/waltid-web-wallet/apps/waltid-dev-wallet/Dockerfile ."
+        sh "docker tag ${randomImageName} ${env.REGISTRY}/${randomImageName}"
+        sh "docker push ${env.REGISTRY}/${randomImageName}"
+        // Build API
+        random = UUID.randomUUID().toString()
+        randomImageName = "jenkins-generated-image-walletidapi:${random}"
+        env.walletid_api_image_name = "jenkins-generated-image-walletidapi"
+        env.walletid_api_image_tag = random
+        sh "docker build -t ${randomImageName} -f waltid-services/waltid-wallet-api/Dockerfile ."
+        sh "docker tag ${randomImageName} ${env.REGISTRY}/${randomImageName}"
+        sh "docker push ${env.REGISTRY}/${randomImageName}"
+    }
+}
+
+def override_values(values, file) {
+    for (def key in values.keySet()) {
+        if (values[key] == '[]') {
+            sh """
+            yq eval -i '${key}=${values[key]}' ${file}
+            """
+        } else {
+            sh """
+            yq eval -i '${key}="${values[key]}"' ${file}
+            """
+        }
+    }
 }
 
 def createCluster(){
     def cluster = [:]
     def random = UUID.randomUUID().toString().take(10)
     cluster.name = "jenkins-${random}"
-    sh "k3d cluster create ${cluster.name} --servers 1 --agents 3 --no-lb --kubeconfig-update-default=false --kubeconfig-switch-context=false"
+    sh "k3d cluster create ${cluster.name} --servers 1 --no-lb --registry-use ${env.REGISTRY_NAME} --kubeconfig-update-default=false --kubeconfig-switch-context=false"
     writeFile file: 'cluster_name.txt', text: cluster.name
     sh "k3d kubeconfig get ${cluster.name} > ${env.KUBECONFIG}"
     sh "chmod 600 ${env.KUBECONFIG}"
@@ -174,13 +183,6 @@ def createCluster(){
         sleep 5
     done
     """
-    withCredentials([
-        string(credentialsId: 'app_id', variable: 'APP_ID'),
-        string(credentialsId: 'sp_password', variable: 'SP_PASSWORD'),
-    ]) {
-        env.REG = params.registery_domain
-        sh('kubectl create secret docker-registry acr-creds --docker-server=$REG --docker-username=$APP_ID --docker-password=$SP_PASSWORD')
-    }
     sh "kubectl apply -f jenkins-files/traefik-config.yaml"
     sh "helm repo add jetstack https://charts.jetstack.io --force-update"
     sh "helm repo update"
@@ -191,14 +193,11 @@ def createCluster(){
     sh "kubectl apply -f jenkins-files/certificate.yaml"
     sh "kubectl wait --for=condition=Ready certificate/${env.DNS_NAME} --timeout=300s"
     sh """
-    kubectl -n kube-system get cm coredns -o yaml | sed 's#NodeHosts: |#NodeHosts: |\\n    ${cluster.server_ip} ${env.DNS_NAME}#' | kubectl apply -f -
+    kubectl -n kube-system get cm coredns -o yaml | \
+    sed 's#NodeHosts: |#NodeHosts: |\\n    ${cluster.server_ip} ${env.DNS_NAME}#' | \
+    kubectl apply -f -
     """
-    def version = get_version()
-    def name = get_name()
-    // sh "helm install identity-and-trust ./helm/${name}-${version}.tgz -f jenkins-files/values.yaml"
-    sh """
-    make install override_values="-f jenkins-files/values.yaml"
-    """
+    sh 'make install override_values="-f jenkins-files/values.yaml"'
     return cluster
 }
 
@@ -227,5 +226,36 @@ def mainTest(cluster) {
     """
     sh "ls tests/results/${time}/traces"
     sh "ls tests/results/${time}/report"
-    publishHTML([allowMissing: false, alwaysLinkToLastBuild: true, keepAll: true, reportDir: "tests/results/${time}/report", reportFiles: 'index.html', reportName: 'Test Report']) 
+    publishHTML([allowMissing: false, alwaysLinkToLastBuild: true, keepAll: true, reportDir: "tests/results/${time}/report", reportFiles: 'index.html', reportName: 'Helm Identity and trust Test Report']) 
 }
+
+// sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+// sudo chmod +x /usr/local/bin/yq
+// PATH="/usr/local/bin:$PATH"
+
+// System.setProperty("hudson.model.DirectoryBrowserSupport.CSP", "")
+// name: d3d-cluster-server-0
+
+// k3d cluster create test3 --servers 1 --no-lb --kubeconfig-update-default=false --kubeconfig-switch-context=false
+
+// k3d kubeconfig get test > tmp.yaml
+// replace=$(yq '.clusters[0].cluster.server' tmp.yaml -r)
+// ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' k3d-test-server-0)
+// sed -i "s|$replace|https://$ip:6443|" tmp.yaml
+
+// kubectl -n kube-system get configmap coredns -o yaml > tmp-coredns.yaml
+// sed -i "/hosts {/a \        ${RECORD}" tmp-coredns.yaml
+
+// RECORD="192.168.0.100 myapp.example.local"
+// kubectl apply -f tmp-coredns.yaml
+// kubectl rollout restart deployment coredns -n kube-system
+
+// k3d kubeconfig get test > ~/.kube/config
+// KUBECONFIG=/path/to/custom/kubeconfig
+
+// groupmod -g new_gid groupname
+// groupmod -g ${gid} docker
+// id=$(stat -c "%g" /var/run/docker.sock)
+// --build-arg gid=$id
+
+// docker run -d --name=worker1 --network host -e "JENKINS_AGENT_SSH_PUBKEY=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDKn/ikEuP6BDMHGevLnAqrwPMcjwaE9EoicxUDUMDmK46spvVO3R0FrhWGN0T9IK80dpeaoHkWTaWZ5RvrkuLXKZfBgHv52AnXi/0MbHVa1ezPenzAA+u7h//qxXrOr3Vzflj/mTQWbhIZx6GZMHYdTDFcpXqFlliLDTCuoLg1Qao6PPTtH/e5ThL6ktKSbRDdhqaZNBryDRWo7ys7silxpwwk0SCB1/tjZXGkUvY0lNonX8JiDXVY3y4NXUgVFidxoBt8Ds5qnj7Dfg7xfrWLBSmjNWRy2bdKC49Rdv/itL/A3UQkmNbv3lVwvUQtSJGcJ0Na079N0ks99Qayk+IQVen1L1z+ZmEONvSIZFIrBgg/NslnLMPvqG6fS5ikPq9d1riVA+6oI0ZdAgJ/OW3RK+vzy3Qqr0PEZh5FR9I+yBovDmtNtdGzyW+xX4qAtYoxFK5U0P9/bsoweYWMYCARs0xROWpYKDfkKJ07bEeNCHtpp+eUqlqZ7IIDZNBByyE= jenkins@089d9f4be72a"  -v /var/run/docker.sock:/var/run/docker.sock -v /usr/local/bin/k3d:/usr/local/bin/k3d jenkinsworker:ssh-v2

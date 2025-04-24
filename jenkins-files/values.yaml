@@ -32,7 +32,6 @@ iam:
       - mountPath: /target
         name: fiware-lib
 
-
 # idp-ui:
 #   image:
 #     repository: dh4sdev.azurecr.io
