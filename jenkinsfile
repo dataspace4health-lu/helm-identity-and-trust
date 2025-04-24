@@ -9,7 +9,7 @@ pipeline {
         VC_ISSUER_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/keycloak-vc-issuer'
         WALTID_IDPKIT_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/waltid-idpkit'
         WALT_IDENTITY_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/waltid-identity'
-        BRANCH_NAME = 'jenkins'
+        // BRANCH_NAME = 'jenkins'
         FALLBACK_BRANCH = 'main'
         REGISTRY = 'localhost:5000'
         REGISTRY_NAME = 'k3d-registry.localhost:5000'
@@ -58,11 +58,13 @@ pipeline {
                         def values = [
                             '(.iam.keycloak.initContainers[] | select(.name == "iam-keycloak-vc-issuer-init")).image': "${env.REGISTRY_NAME}/${env.vc_issuer_image_name}:${env.vc_issuer_image_tag}", 
                             '.iam.keycloak.image.pullSecrets': '[]', 
-                            '.wallet-ui.image.repository' : "${env.REGISTRY_NAME}/${env.walletid_ui_image_name}", 
+                            '.wallet-ui.image.repository' : "${env.REGISTRY_NAME}", 
+                            '.wallet-ui.image.name' : "${env.walletid_ui_image_name}",
                             '.wallet-ui.image.tag' : "${env.walletid_ui_image_tag}",
                             '.wallet-ui.image.pullSecrets' : "", 
-                            '.wallet-api.image.repository' : "${env.REGISTRY_NAME}/${env.walletid_api_image_name}", 
-                            '.wallet-api.image.tag' : "${env.walletid_ui_image_tag}", 
+                            '.wallet-api.image.repository' : "${env.REGISTRY_NAME}", 
+                            '.wallet-api.image.name' : "${env.walletid_api_image_name}", 
+                            '.wallet-api.image.tag' : "${env.walletid_api_image_tag}", 
                             '.wallet-api.image.pullSecrets' : "", 
                         ]
                         override_values(values, 'jenkins-files/values.yaml')
@@ -228,34 +230,3 @@ def mainTest(cluster) {
     sh "ls tests/results/${time}/report"
     publishHTML([allowMissing: false, alwaysLinkToLastBuild: true, keepAll: true, reportDir: "tests/results/${time}/report", reportFiles: 'index.html', reportName: 'Helm Identity and trust Test Report']) 
 }
-
-// sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
-// sudo chmod +x /usr/local/bin/yq
-// PATH="/usr/local/bin:$PATH"
-
-// System.setProperty("hudson.model.DirectoryBrowserSupport.CSP", "")
-// name: d3d-cluster-server-0
-
-// k3d cluster create test3 --servers 1 --no-lb --kubeconfig-update-default=false --kubeconfig-switch-context=false
-
-// k3d kubeconfig get test > tmp.yaml
-// replace=$(yq '.clusters[0].cluster.server' tmp.yaml -r)
-// ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' k3d-test-server-0)
-// sed -i "s|$replace|https://$ip:6443|" tmp.yaml
-
-// kubectl -n kube-system get configmap coredns -o yaml > tmp-coredns.yaml
-// sed -i "/hosts {/a \        ${RECORD}" tmp-coredns.yaml
-
-// RECORD="192.168.0.100 myapp.example.local"
-// kubectl apply -f tmp-coredns.yaml
-// kubectl rollout restart deployment coredns -n kube-system
-
-// k3d kubeconfig get test > ~/.kube/config
-// KUBECONFIG=/path/to/custom/kubeconfig
-
-// groupmod -g new_gid groupname
-// groupmod -g ${gid} docker
-// id=$(stat -c "%g" /var/run/docker.sock)
-// --build-arg gid=$id
-
-// docker run -d --name=worker1 --network host -e "JENKINS_AGENT_SSH_PUBKEY=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDKn/ikEuP6BDMHGevLnAqrwPMcjwaE9EoicxUDUMDmK46spvVO3R0FrhWGN0T9IK80dpeaoHkWTaWZ5RvrkuLXKZfBgHv52AnXi/0MbHVa1ezPenzAA+u7h//qxXrOr3Vzflj/mTQWbhIZx6GZMHYdTDFcpXqFlliLDTCuoLg1Qao6PPTtH/e5ThL6ktKSbRDdhqaZNBryDRWo7ys7silxpwwk0SCB1/tjZXGkUvY0lNonX8JiDXVY3y4NXUgVFidxoBt8Ds5qnj7Dfg7xfrWLBSmjNWRy2bdKC49Rdv/itL/A3UQkmNbv3lVwvUQtSJGcJ0Na079N0ks99Qayk+IQVen1L1z+ZmEONvSIZFIrBgg/NslnLMPvqG6fS5ikPq9d1riVA+6oI0ZdAgJ/OW3RK+vzy3Qqr0PEZh5FR9I+yBovDmtNtdGzyW+xX4qAtYoxFK5U0P9/bsoweYWMYCARs0xROWpYKDfkKJ07bEeNCHtpp+eUqlqZ7IIDZNBByyE= jenkins@089d9f4be72a"  -v /var/run/docker.sock:/var/run/docker.sock -v /usr/local/bin/k3d:/usr/local/bin/k3d jenkinsworker:ssh-v2
