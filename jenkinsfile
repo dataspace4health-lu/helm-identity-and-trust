@@ -204,7 +204,7 @@ def deployIT(cluster) {
     // clone helm repo
     cloneRepo(env.HELM_REPO, 'helm-identity-and-trust')
     dir('helm-identity-and-trust') {
-        // override the values 
+        // set images in the custom values
         def values = [
             '.wallet-ui.image.repository' : "${env.REGISTRY_NAME}", 
             '.wallet-ui.image.name' : "${env.walletid_ui_image_name}",
@@ -216,6 +216,7 @@ def deployIT(cluster) {
             '.wallet-api.image.pullSecrets' : "", 
         ]
         override_values(values, 'jenkins-files/values.yaml')
+        // set keycloak image in the default values
         values = [
             '(.iam.keycloak.initContainers[] | select(.name == "iam-keycloak-vc-issuer-init")).image': "${env.REGISTRY_NAME}/${env.vc_issuer_image_name}:${env.vc_issuer_image_tag}", 
             '.iam.keycloak.image.pullSecrets': '[]', 
