@@ -222,8 +222,6 @@ def deployIT(cluster) {
             '.iam.keycloak.image.pullSecrets': '[]', 
         ]
         override_values(values, 'values.yaml')
-        sh('cat jenkins-files/values.yaml')
-        sh('head -n 50 values.yaml')
         // Package charts 
         sh 'make build'
         // deploy package 
@@ -238,11 +236,13 @@ def cleanup() {
     sh "docker rmi ${env.vc_issuer_image_name}:${env.vc_issuer_image_tag}"
     sh "docker rmi ${REGISTRY}/${env.walletid_ui_image_name}:${env.walletid_ui_image_tag}"
     sh "docker rmi ${env.walletid_ui_image_name}:${env.walletid_ui_image_tag}"
+    sh "docker rmi ${REGISTRY}/${env.walletid_api_image_name}:${env.walletid_api_image_tag}"
+    sh "docker rmi ${env.walletid_api_image_name}:${env.walletid_api_image_tag}"
 }
 
 def postCleanup(){
-    if (fileExists('helm-identity-and-trust/cluster_name.txt')) {
-        def clusterName = readFile('helm-identity-and-trust/cluster_name.txt').trim()
+    if (fileExists('cluster_name.txt')) {
+        def clusterName = readFile('cluster_name.txt').trim()
         sh "k3d cluster delete ${clusterName}"
     }
     cleanWs()
