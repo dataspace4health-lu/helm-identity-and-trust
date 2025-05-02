@@ -30,6 +30,7 @@ pipeline {
         stage("Setup git and kubectl access") {
             steps {
                 script {
+                    cleanWs()
                     ms.initSetup()
                 }
             }

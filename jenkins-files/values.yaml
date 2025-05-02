@@ -1,13 +1,13 @@
 wallet-ui: 
   image:
     repository: dh4sdev.azurecr.io
-    name: walletid-identity-ui
+    name: wallet-idenity-ui
     tag: "0.0.1"
     pullSecrets: acr-creds
 
 wallet-api:
   image:
     repository: dh4sdev.azurecr.io
-    name: walletid-identity-api
+    name: wallet-idenity-api
     tag: "0.0.1"
     pullSecrets: acr-creds
