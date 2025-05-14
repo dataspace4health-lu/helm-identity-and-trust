@@ -1,23 +1,12 @@
-#!groovy 
+@Library(value="ds4h", changelog=false) _
+
 pipeline {
     environment {
-        SSH_GIT_FILE = "${env.WORKSPACE}/key"
-        GIT_SSH_COMMAND = "ssh -i ${env.SSH_GIT_FILE}"
-        KUBECONFIG_DIR = "${env.WORKSPACE}/tmp"
-        KUBECONFIG = "${env.KUBECONFIG_DIR}/kube.yaml"
         DNS_NAME = 'dataspace4health.local'
         IT_HELM_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/helm-identity-and-trust'
-        VC_ISSUER_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/keycloak-vc-issuer'
-        WALTID_IDPKIT_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/waltid-idpkit'
-        WALT_IDENTITY_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/waltid-identity'
-        HELM_IT_DIR = 'helm-identity-and-trust'
-        VC_ISSUER_DIR = 'keycloak-vc-issuer'
-        WALLETID_DIR = 'walletid'
         BRANCH_NAME = "${params.branch}"
-        FALLBACK_BRANCH = 'main'
         REGISTRY = 'localhost:5000'
         REGISTRY_NAME = 'k3d-registry.localhost:5000'
-        CLUSTER_FILE = "${env.WORKSPACE}/cluster.txt"
     }
 
     parameters {
@@ -31,7 +20,8 @@ pipeline {
             steps {
                 script {
                     cleanWs()
-                    ms.initSetup()
+                    utils.setEnv()
+                    utils.initSetup()
                 }
             }
         }
@@ -52,10 +42,20 @@ pipeline {
             }
         }
 
+        stage("Helm Chart Security Check") {
+            steps {
+                script {
+                    utils.cloneRepo(env.IT_HELM_REPO, env.HELM_IT_DIR)
+                    dir(env.HELM_FC_DIR) {
+                        tests.trivyHelmChartCheck("./", "Identity and Trust")
+                    }
+                }
+            }
+        }
+
         stage("Create K3d Cluster and Test") {
             steps {
                 script {
-                    // deploy and test identity and trust
                     ms.deployIT()
                 }
             }
