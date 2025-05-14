@@ -46,7 +46,7 @@ pipeline {
             steps {
                 script {
                     utils.cloneRepo(env.IT_HELM_REPO, env.HELM_IT_DIR)
-                    dir(env.HELM_FC_DIR) {
+                    dir(env.HELM_IT_DIR) {
                         tests.trivyHelmChartCheck("./", "Identity and Trust")
                     }
                 }
