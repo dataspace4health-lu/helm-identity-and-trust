@@ -175,7 +175,7 @@
         {{- end }}
         {{- if (eq (len .Misconfigurations ) 0) }}
             <tr>
-                <th colspan="6">No Vulnrabilities found</th>
+                <th colspan="6">No misconfigurations found</th>
             </tr>
         {{- else }}
             <tr class="sub-header">
