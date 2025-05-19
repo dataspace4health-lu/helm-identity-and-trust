@@ -3,7 +3,6 @@
 pipeline {
     environment {
         DNS_NAME = 'dataspace4health.local'
-        IT_HELM_REPO = 'git@ssh.dev.azure.com:v3/Dataspace4Health/DS4H/helm-identity-and-trust'
         BRANCH_NAME = "${params.branch}"
         REGISTRY = 'localhost:5000'
         REGISTRY_NAME = 'k3d-registry.localhost:5000'
@@ -57,7 +56,7 @@ pipeline {
 
         stage("Deploy And Test") {
             parallel {
-                stage("Create K3d Cluster and Test") {
+                stage("Deploy Helm Identit and Trust") {
                     steps {
                         script {
                             ms.deployIT()
@@ -67,7 +66,6 @@ pipeline {
                 stage("Helm Charts Security Check") {
                     steps {
                         script {
-                            utils.cloneRepo(env.IT_HELM_REPO, env.HELM_IT_DIR)
                             dir(env.HELM_IT_DIR) {
                                 tests.trivyHelmChartCheck("./", "Identity and Trust")
                             }
