@@ -25,7 +25,6 @@ pipeline {
                     utils.cloneRepo(env.IT_HELM_REPO, env.HELM_IT_DIR)
                     ms.setupVcIssuerRepo()
                     ms.setupWaltidRepo()
-                    env.TEMPLATE_PATH = "${env.WORKSPACE}/${env.WALLETID_DIR}/html.tpl"
                 }
             }
         }
