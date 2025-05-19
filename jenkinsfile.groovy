@@ -22,8 +22,25 @@ pipeline {
                     utils.setEnv()
                     utils.initSetup()
                     utils.cloneRepo(env.IT_HELM_REPO, env.HELM_IT_DIR)
-                    ms.setupVcIssuerRepo()
-                    ms.setupWaltidRepo()
+                }
+            }
+        }
+
+        stage("Clone Repositories") {
+            parallel {
+                stage("Clone VC Issuer Repo") {
+                    steps {
+                        script {
+                            ms.setupVcIssuerRepo()
+                        }
+                    }
+                }
+                stage("Clone Wallet identity Repo") {
+                    steps {
+                        script {
+                            ms.setupWaltidRepo()
+                        }
+                    }
                 }
             }
         }
