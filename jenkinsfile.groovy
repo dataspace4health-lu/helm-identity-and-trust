@@ -22,55 +22,58 @@ pipeline {
                     cleanWs()
                     utils.setEnv()
                     utils.initSetup()
-                }
-            }
-        }
-
-        stage("Build VC Issuer Image") {
-            steps {
-                script {
-                    ms.buildVCIssuerImage()
-                }
-            }
-        }
-
-        stage("Build Wallet Identity UI and API Images") {
-            steps {
-                script {
-                    ms.buildWaltidImages()
-                }
-            }
-        }
-
-        stage("Helm Chart Security Check") {
-            steps {
-                script {
                     utils.cloneRepo(env.IT_HELM_REPO, env.HELM_IT_DIR)
-                    dir(env.HELM_IT_DIR) {
-                        tests.trivyHelmChartCheck("./", "Identity and Trust")
+                    ms.setupVcIssuerRepo()
+                    ms.setupWaltidRepo()
+                    env.TEMPLATE_PATH = "${env.WORKSPACE}/${env.WALLETID_DIR}/html.tpl"
+                }
+            }
+        }
+
+        stage("Build Images") {
+            parallel {
+                stage("Build Walletid UI") {
+                    steps {
+                        script {
+                            ms.buildWaltidUI()
+                        }
+                    }
+                }
+                stage("Build Walletid API") {
+                    steps {
+                        script {
+                            ms.buildWaltidAPI()
+                        }
+                    }
+                }
+                stage("Build Keykloak VC Issuer Image") {
+                    steps {
+                        script {
+                            ms.buildVCIssuerImage()
+                        }
                     }
                 }
             }
         }
 
-        stage("Create K3d Cluster and Test") {
-            steps {
-                script {
-                    ms.deployIT()
+        stage("Deploy And Test") {
+            parallel {
+                stage("Create K3d Cluster and Test") {
+                    steps {
+                        script {
+                            ms.deployIT()
+                        }
+                    }
                 }
-            }
-        }
-
-        stage("Clean Up") {
-            steps {
-                script {
-                    // delete Idenity and trust images
-                    sh "docker rmi ${REGISTRY}/${env.vc_issuer_image_name}:${env.vc_issuer_image_tag}"
-                    sh "docker rmi ${env.vc_issuer_image_name}:${env.vc_issuer_image_tag}"
-                    sh "docker rmi ${REGISTRY}/${env.walletid_ui_image_name}:${env.walletid_ui_image_tag}"
-                    sh "docker rmi ${env.walletid_ui_image_name}:${env.walletid_ui_image_tag}"
-                    sh "docker rmi ${REGISTRY}/${env.walletid_api_image_name}:${env.walletid_api_image_tag}"
-                    sh "docker rmi ${env.walletid_api_image_name}:${env.walletid_api_image_tag}"
+                stage("Helm Charts Security Check") {
+                    steps {
+                        script {
+                            utils.cloneRepo(env.IT_HELM_REPO, env.HELM_IT_DIR)
+                            dir(env.HELM_IT_DIR) {
+                                tests.trivyHelmChartCheck("./", "Identity and Trust")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -79,6 +82,9 @@ pipeline {
     post {
         always {
             script {
+                ms.deleteImage(env.VC_ISSUER_IMG_FILE)
+                ms.deleteImage(env.WALLETID_UI_IMG_FILE)
+                ms.deleteImage(env.WALLETID_API_IMG_FILE)
                 ms.postCleanup()
             }
         }
