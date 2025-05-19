@@ -15,7 +15,7 @@ pipeline {
     agent {label 'worker'}
 
     stages {
-        stage("Setup git and kubectl access") {
+        stage("Initization") {
             steps {
                 script {
                     cleanWs()
