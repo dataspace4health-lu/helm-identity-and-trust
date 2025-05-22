@@ -6,7 +6,7 @@ name: issuer-api
 # nameOverride: "issuer-api"
 
 image:
-  repository: docker.io
+  repository: ds4h-registry:5432
   # -- Image name
   name: waltid/ssikit
   # -- Image tag
@@ -16,7 +16,7 @@ image:
   # Uses image.tag if empty
   sha: ""
   # -- Image pull policy
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # -- Image pull secret when internal image is used
   #pullSecrets: deployment-key-light
 
