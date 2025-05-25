@@ -31,14 +31,12 @@ pipeline {
                 stage("Clone VC Issuer Repo") {
                     steps {
                         script {
-                            ms.setupVcIssuerRepo()
-                        }
-                    }
+                            ms.setupVcIssuerRepo(false)
                 }
                 stage("Clone Wallet identity Repo") {
                     steps {
                         script {
-                            ms.setupWaltidRepo()
+                            ms.setupWaltidRepo(false)
                         }
                     }
                 }
