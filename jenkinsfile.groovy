@@ -32,6 +32,8 @@ pipeline {
                     steps {
                         script {
                             ms.setupVcIssuerRepo(false)
+                        }
+                    }
                 }
                 stage("Clone Wallet identity Repo") {
                     steps {
