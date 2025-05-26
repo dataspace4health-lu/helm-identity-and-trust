@@ -14,7 +14,7 @@ spec:
   template:
     spec:
       containers:
-      - name: {{ template "app.chartname" . }}-keyclaok-client-init
+      - name: {{ template "app.chartname" . }}-keycloak-client-init
         image: curlimages/curl:latest
         command: ["sh", "-c"]
         args:
