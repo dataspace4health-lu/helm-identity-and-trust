@@ -16,7 +16,7 @@ image:
   # Uses image.tag if empty
   sha: ""
   # -- Image pull policy
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # -- Image pull secret when internal image is used
   #pullSecrets: deployment-key-light
 
