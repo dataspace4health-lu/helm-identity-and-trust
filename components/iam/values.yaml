@@ -22,8 +22,6 @@ keycloak:
   extraEnvVars:
     - name: KEYCLOAK_EXTRA_ARGS
       value: "--import-realm"
-    - name: KC_FEATURES
-      value: token-exchange,admin-fine-grained-authz # required by Walt.Id Wallet API
     - name: PROXY_ADDRESS_FORWARDING
       value: "true"
   extraVolumeMounts:
