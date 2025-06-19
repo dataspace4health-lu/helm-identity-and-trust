@@ -38,7 +38,7 @@ pipeline {
                 stage("Clone idpkit") {
                     steps {
                         script {
-                            ms.setupIdpKitRepo(false)
+                            ms.setupIdpKitRepo()
                         }
                     }
                 }
