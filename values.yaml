@@ -144,26 +144,26 @@ iam:
           hosts:
            - dataspace4health.local
   clients:
-  - realm: ds4h
-    realmAdminUser: admin
-    realmAdminPass: xfsc4Ntt!
-    issuers:
-    - did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
-      supportedVCTypes:
-      - type: "NaturalPerson"
-        format: "ldp_vc"
-        claims: "firstName,familyName,email,roles"
-      claims:
-      - vcType: "NaturalPerson"
-        claims: "firstName,familyName,email,roles"
-    identityProviders:
-    - alias: iat-idpkit
-      displayName: "Login with SSI"
-      clientName: keycloak
-      oidcDiscoveryUrl: https://dataspace4health.local/idp/api/oidc/.well-known/openid-configuration
-      clientRegisterUrl: http://iat-idp-api.default.svc.cluster.local:8080/api/oidc/clients/register
-      redirectUri: https://dataspace4health.local/iam/realms/ds4h/broker/iat-idpkit/endpoint
-      defaultScope: "openid profile email roles"
+  # - realm: ds4h
+  #   realmAdminUser: admin
+  #   realmAdminPass: xfsc4Ntt!
+  #   issuers:
+  #   - did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
+  #     supportedVCTypes:
+  #     - type: "NaturalPerson"
+  #       format: "ldp_vc"
+  #       claims: "firstName,familyName,email,roles"
+  #     claims:
+  #     - vcType: "NaturalPerson"
+  #       claims: "firstName,familyName,email,roles"
+  #   identityProviders:
+  #   - alias: iat-idpkit
+  #     displayName: "Login with SSI"
+  #     clientName: keycloak
+  #     oidcDiscoveryUrl: https://dataspace4health.local/idp/api/oidc/.well-known/openid-configuration
+  #     clientRegisterUrl: http://iat-idp-api.default.svc.cluster.local:8080/api/oidc/clients/register
+  #     redirectUri: https://dataspace4health.local/iam/realms/ds4h/broker/iat-idpkit/endpoint
+  #     defaultScope: "openid profile email roles"
 idp-api:
   nameOverride: idp-api
   config:
