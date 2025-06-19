@@ -39,13 +39,13 @@ iam:
             curl -kI $1
           }
           wait-for-url ${url}
-    - name: iam-keycloak-vc-issuer-init
-      #image: quay.io/fiware/keycloak-vc-issuer:1.0.3
-      image: ds4h-registry:5432/fiware/keycloak-vc-issuer
-      imagePullPolicy: Always
-      volumeMounts:
-      - mountPath: /target
-        name: fiware-lib
+    # - name: iam-keycloak-vc-issuer-init
+    #   #image: quay.io/fiware/keycloak-vc-issuer:1.0.3
+    #   image: ds4h-registry:5432/fiware/keycloak-vc-issuer
+    #   imagePullPolicy: Always
+    #   volumeMounts:
+    #   - mountPath: /target
+    #     name: fiware-lib
     command: ["sh", "-c"]
     args:
     - |
