@@ -28,10 +28,17 @@ pipeline {
 
         stage("Clone Repositories") {
             parallel {
-                stage("Clone VC Issuer Repo") {
+                // stage("Clone VC Issuer Repo") {
+                //     steps {
+                //         script {
+                //             ms.setupVcIssuerRepo(false)
+                //         }
+                //     }
+                // }
+                stage("Clone idpkit") {
                     steps {
                         script {
-                            ms.setupVcIssuerRepo(false)
+                            ms.setupIdpKitRepo()
                         }
                     }
                 }
@@ -61,10 +68,17 @@ pipeline {
                         }
                     }
                 }
-                stage("Build Keykloak VC Issuer Image") {
+                // stage("Build Keykloak VC Issuer Image") {
+                //     steps {
+                //         script {
+                //             ms.buildVCIssuerImage()
+                //         }
+                //     }
+                // }
+                stage("Build Idpkit Image") {
                     steps {
                         script {
-                            ms.buildVCIssuerImage()
+                            buildIdpKitImage()
                         }
                     }
                 }
