@@ -42,6 +42,13 @@ pipeline {
                         }
                     }
                 }
+                stage("Clone ssikit") {
+                    steps {
+                        script {
+                            ms.setupSSIKitRepo()
+                        }
+                    }
+                }
                 stage("Clone Wallet identity Repo") {
                     steps {
                         script {
@@ -79,6 +86,13 @@ pipeline {
                     steps {
                         script {
                             ms.buildIdpKitImage()
+                        }
+                    }
+                }
+                stage("Build SSIkit Image") {
+                    steps {
+                        script {
+                            ms.buildSSIKitImage()
                         }
                     }
                 }
