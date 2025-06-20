@@ -454,6 +454,9 @@
       "clientRoles": {
         "realm-management": [
           "realm-admin"
+        ],
+        "federated-catalogue": [
+          "Ro-MU-CA"
         ]
       },
       "groups": [
