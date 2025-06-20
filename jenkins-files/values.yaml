@@ -19,7 +19,7 @@ idp-api:
     tag: "0.0.1"
     pullSecrets: acr-creds
 
-ssikit-api: 
+issuer-api: 
   image:
     repository: registry_domain
     name: "image_name"
