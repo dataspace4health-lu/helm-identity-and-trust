@@ -27,13 +27,6 @@ pipeline {
 
         stage("Clone Repositories") {
             parallel {
-                // stage("Clone VC Issuer Repo") {
-                //     steps {
-                //         script {
-                //             ms.setupVcIssuerRepo(false)
-                //         }
-                //     }
-                // }
                 stage("Clone Helm Identity And Trust") {
                     steps {
                         script {
@@ -44,10 +37,12 @@ pipeline {
                         }
                     }
                 }
-                stage("Clone idpkit") {
+                stage("Clone idpkit, ssikit and keycloak-vc-issuer") {
                     steps {
                         script {
                             ms.setupIdpKitRepo()
+                            ms.setupSSIKitRepo()
+                            ms.setupVcIssuerRepo()
                         }
                     }
                 }
@@ -77,17 +72,24 @@ pipeline {
                         }
                     }
                 }
-                // stage("Build Keykloak VC Issuer Image") {
-                //     steps {
-                //         script {
-                //             ms.buildVCIssuerImage()
-                //         }
-                //     }
-                // }
                 stage("Build Idpkit Image") {
                     steps {
                         script {
                             ms.buildIdpKitImage()
+                        }
+                    }
+                }
+                stage("Build SSIkit Image") {
+                    steps {
+                        script {
+                            ms.buildSsikitImage()
+                        }
+                    }
+                }
+                stage("Build Keycloak VC Issuer Image") {
+                    steps {
+                        script {
+                            ms.buildVCIssuerImage()
                         }
                     }
                 }

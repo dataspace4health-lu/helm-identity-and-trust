@@ -8,7 +8,8 @@ data:
     {
       "proofConfig": {
         "issuerDid": {{ .Values.config.issuer.did | quote }},
-        "proofType": {{ .Values.config.issuer.proofType | quote }}
+        "proofType": {{ .Values.config.issuer.proofType | quote }},
+        "ldSignatureType": "JsonWebSignature2020"
       },
       "templatesFolder": {{ .Values.config.issuer.templatesFolder | quote }}
     }
