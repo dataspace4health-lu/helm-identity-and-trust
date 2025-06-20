@@ -28,13 +28,6 @@ pipeline {
 
         stage("Clone Repositories") {
             parallel {
-                // stage("Clone VC Issuer Repo") {
-                //     steps {
-                //         script {
-                //             ms.setupVcIssuerRepo(false)
-                //         }
-                //     }
-                // }
                 stage("Clone idpkit, ssikit and keycloak-vc-issuer") {
                     steps {
                         script {
@@ -70,13 +63,6 @@ pipeline {
                         }
                     }
                 }
-                // stage("Build Keykloak VC Issuer Image") {
-                //     steps {
-                //         script {
-                //             ms.buildVCIssuerImage()
-                //         }
-                //     }
-                // }
                 stage("Build Idpkit Image") {
                     steps {
                         script {
