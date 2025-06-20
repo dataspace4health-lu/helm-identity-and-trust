@@ -35,16 +35,10 @@ pipeline {
                 //         }
                 //     }
                 // }
-                stage("Clone idpkit") {
+                stage("Clone idpkit and ssikit") {
                     steps {
                         script {
                             ms.setupIdpKitRepo()
-                        }
-                    }
-                }
-                stage("Clone ssikit") {
-                    steps {
-                        script {
                             ms.setupSSIKitRepo()
                         }
                     }
