@@ -35,11 +35,12 @@ pipeline {
                 //         }
                 //     }
                 // }
-                stage("Clone idpkit and ssikit") {
+                stage("Clone idpkit, ssikit and keycloak-vc-issuer") {
                     steps {
                         script {
                             ms.setupIdpKitRepo()
                             ms.setupSSIKitRepo()
+                            ms.setupVcIssuerRepo()
                         }
                     }
                 }
@@ -87,6 +88,13 @@ pipeline {
                     steps {
                         script {
                             ms.buildSsikitImage()
+                        }
+                    }
+                }
+                stage("Build Keycloak VC Issuer Image") {
+                    steps {
+                        script {
+                            ms.buildVCIssuerImage()
                         }
                     }
                 }
