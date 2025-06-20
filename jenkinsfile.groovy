@@ -21,7 +21,6 @@ pipeline {
                     cleanWs()
                     utils.setEnv()
                     utils.initSetup()
-                    utils.cloneRepo(env.IT_HELM_REPO, env.HELM_IT_DIR)
                 }
             }
         }
@@ -35,6 +34,16 @@ pipeline {
                 //         }
                 //     }
                 // }
+                stage("Clone Helm Identity And Trust") {
+                    steps {
+                        script {
+                            utils.cloneRepo(env.IT_HELM_REPO, env.HELM_IT_DIR)
+                            dir(env.HELM_IT_DIR) {
+                                sh 'make build'
+                            }
+                        }
+                    }
+                }
                 stage("Clone idpkit") {
                     steps {
                         script {
