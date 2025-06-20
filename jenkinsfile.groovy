@@ -86,7 +86,7 @@ pipeline {
                 stage("Build SSIkit Image") {
                     steps {
                         script {
-                            ms.buildSSIKitImage()
+                            ms.buildSsikitImage()
                         }
                     }
                 }
