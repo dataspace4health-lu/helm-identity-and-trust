@@ -42,7 +42,6 @@ pipeline {
                         script {
                             ms.setupIdpKitRepo()
                             ms.setupVcIssuerRepo()
-                            // SSIKit sutep must be executed as last
                             ms.setupSSIKitRepo()
                         }
                     }
