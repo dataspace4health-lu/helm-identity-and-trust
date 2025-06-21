@@ -121,9 +121,11 @@ pipeline {
     post {
         always {
             script {
-                ms.deleteImage(env.VC_ISSUER_IMG_FILE)
                 ms.deleteImage(env.WALLETID_UI_IMG_FILE)
                 ms.deleteImage(env.WALLETID_API_IMG_FILE)
+                ms.deleteImage(env.IDPKIT_IMG_FILE)
+                ms.deleteImage(env.SSIKIT_IMG_FILE)
+                ms.deleteImage(env.VC_ISSUER_IMG_FILE)
                 ms.postCleanup()
             }
         }
