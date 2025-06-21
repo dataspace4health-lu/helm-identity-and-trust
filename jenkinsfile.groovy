@@ -37,7 +37,7 @@ pipeline {
                         }
                     }
                 }
-                stage("Clone idpkit, ssikit and keycloak-vc-issuer") {
+                stage("Clone idpkit, keycloak-vc-issuer and ssikit") {
                     steps {
                         script {
                             ms.setupIdpKitRepo()
