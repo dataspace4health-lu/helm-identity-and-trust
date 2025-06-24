@@ -85,10 +85,10 @@ iam:
       mountPath: "/opt/bitnami/keycloak/data/import/iam-realm.json"
       subPath: "iam-realm.json"
       readOnly: true
-    - name: extra-config
-      mountPath: "/opt/keys/keyfile.json"
-      subPath: "keyfile.json"
-      readOnly: true
+    # - name: extra-config
+    #   mountPath: "/opt/keys/keyfile.json"
+    #   subPath: "keyfile.json"
+    #   readOnly: true
     - name: fiware-lib
       mountPath: "/opt/bitnami/keycloak/custom_providers/"
     - name: fiware-data
@@ -104,12 +104,12 @@ iam:
         items:
         - key: "iam-realm.json"
           path: "iam-realm.json"
-    - name: extra-config
-      configMap:
-        name: iat-iam-extra-configmap
-        items:
-        - key: "keyfile.json"
-          path: "keyfile.json"
+    # - name: extra-config
+    #   configMap:
+    #     name: iat-iam-extra-configmap
+    #     items:
+    #     - key: "keyfile.json"
+    #       path: "keyfile.json"
     - name: fiware-lib
     - name: fiware-data
       emptyDir: {}
