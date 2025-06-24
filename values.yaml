@@ -18,34 +18,33 @@ iam:
     containerSecurityContext:
       readOnlyRootFilesystem: false
     initContainers:
-    # - name: iam-keycloak-init
-    #   image: curlimages/curl:latest
-    #   imagePullPolicy: IfNotPresent
-    #   env:
-    #   - name: VCISSUER_ISSUER_DID
-    #     value: did:web:dataspace4health.local:wallet:api:wallet-api:registry:0
-    #   command: ["sh", "-c"]
-    #   args:
-    #     - |
-    #       # wait for waltid issuer to be available
-    #       url=https://$(echo $VCISSUER_ISSUER_DID | sed 's|did:web:||' | sed 's|:|/|g')/did.json
-    #       wait-for-url() {
-    #         echo "Testing $1"
-    #         timeout -s TERM 200 sh -c \
-    #         'while [[ "$(curl -k -s -o /dev/null -L -w ''%{http_code}'' ${0})" != "200" ]];\
-    #         do echo "Waiting for ${0}" && sleep 20;\
-    #         done' ${1}
-    #         echo "OK!"
-    #         curl -kI $1
-    #       }
-    #       wait-for-url ${url}
-    # - name: iam-keycloak-vc-issuer-init
-    #   #image: quay.io/fiware/keycloak-vc-issuer:1.0.3
-    #   image: ds4h-registry:5432/fiware/keycloak-vc-issuer
-    #   imagePullPolicy: Always
-    #   volumeMounts:
-    #   - mountPath: /target
-    #     name: fiware-lib
+    - name: iam-keycloak-init
+      image: curlimages/curl:latest
+      imagePullPolicy: IfNotPresent
+      env:
+      - name: VCISSUER_ISSUER_DID
+        value: did:web:dataspace4health.local:wallet:api:wallet-api:registry:0
+      command: ["sh", "-c"]
+      args:
+        - |
+          # wait for waltid issuer to be available
+          url=https://$(echo $VCISSUER_ISSUER_DID | sed 's|did:web:||' | sed 's|:|/|g')/did.json
+          wait-for-url() {
+            echo "Testing $1"
+            timeout -s TERM 200 sh -c \
+            'while [[ "$(curl -k -s -o /dev/null -L -w ''%{http_code}'' ${0})" != "200" ]];\
+            do echo "Waiting for ${0}" && sleep 20;\
+            done' ${1}
+            echo "OK!"
+            curl -kI $1
+          }
+          wait-for-url ${url}
+    - name: iam-keycloak-vc-issuer-init
+      image: ds4h-registry:5432/fiware/keycloak-vc-issuer
+      imagePullPolicy: Always
+      volumeMounts:
+      - mountPath: /target
+        name: fiware-lib
     command: ["sh", "-c"]
     args:
     - |
@@ -144,26 +143,26 @@ iam:
           hosts:
            - dataspace4health.local
   clients:
-  # - realm: ds4h
-  #   realmAdminUser: admin
-  #   realmAdminPass: xfsc4Ntt!
-  #   issuers:
-  #   - did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
-  #     supportedVCTypes:
-  #     - type: "NaturalPerson"
-  #       format: "ldp_vc"
-  #       claims: "firstName,familyName,email,roles"
-  #     claims:
-  #     - vcType: "NaturalPerson"
-  #       claims: "firstName,familyName,email,roles"
-  #   identityProviders:
-  #   - alias: iat-idpkit
-  #     displayName: "Login with SSI"
-  #     clientName: keycloak
-  #     oidcDiscoveryUrl: https://dataspace4health.local/idp/api/oidc/.well-known/openid-configuration
-  #     clientRegisterUrl: http://iat-idp-api.default.svc.cluster.local:8080/api/oidc/clients/register
-  #     redirectUri: https://dataspace4health.local/iam/realms/ds4h/broker/iat-idpkit/endpoint
-  #     defaultScope: "openid profile email roles"
+  - realm: ds4h
+    realmAdminUser: admin
+    realmAdminPass: xfsc4Ntt!
+    issuers:
+    - did: "did:web:dataspace4health.local:wallet:api:wallet-api:registry:0"
+      supportedVCTypes:
+      - type: "NaturalPerson"
+        format: "ldp_vc"
+        claims: "firstName,familyName,email,roles"
+      claims:
+      - vcType: "NaturalPerson"
+        claims: "firstName,familyName,email,roles"
+    identityProviders:
+    - alias: iat-idpkit
+      displayName: "Login with SSI"
+      clientName: keycloak
+      oidcDiscoveryUrl: https://dataspace4health.local/idp/api/oidc/.well-known/openid-configuration
+      clientRegisterUrl: http://iat-idp-api.default.svc.cluster.local:8080/api/oidc/clients/register
+      redirectUri: https://dataspace4health.local/iam/realms/ds4h/broker/iat-idpkit/endpoint
+      defaultScope: "openid profile email roles"
 idp-api:
   nameOverride: idp-api
   config:
