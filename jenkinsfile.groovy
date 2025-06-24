@@ -15,7 +15,7 @@ pipeline {
     agent {label 'worker'}
 
     stages {
-        stage("Initization") {
+        stage("Initialization") {
             steps {
                 script {
                     cleanWs()
@@ -37,7 +37,7 @@ pipeline {
                         }
                     }
                 }
-                stage("Clone idpkit, keycloak-vc-issuer and ssikit") {
+                stage("Setup idpkit, keycloak-vc-issuer and ssikit") {
                     steps {
                         script {
                             ms.setupIdpKitRepo()
@@ -46,7 +46,7 @@ pipeline {
                         }
                     }
                 }
-                stage("Clone Wallet identity Repo") {
+                stage("Setup Walt identity Repo") {
                     steps {
                         script {
                             ms.setupWaltidRepo(false)
