@@ -97,13 +97,9 @@ pipeline {
         }
 
         stage("Deploy And Test") {
-            parallel {
-                stage("Deploy Helm Identit and Trust") {
-                    steps {
-                        script {
-                            ms.deployIT()
-                        }
-                    }
+            steps {
+                script {
+                    ms.deployIT()
                 }
             }
         }
