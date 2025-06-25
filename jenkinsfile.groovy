@@ -32,7 +32,7 @@ pipeline {
                         script {
                             utils.cloneRepo(env.IT_HELM_REPO, env.HELM_IT_DIR)
                             dir(env.HELM_IT_DIR) {
-                                sh 'make build'
+                                tests.trivyHelmChartCheck("./", "Identity and Trust")
                             }
                         }
                     }
@@ -102,15 +102,6 @@ pipeline {
                     steps {
                         script {
                             ms.deployIT()
-                        }
-                    }
-                }
-                stage("Helm Charts Security Check") {
-                    steps {
-                        script {
-                            dir(env.HELM_IT_DIR) {
-                                tests.trivyHelmChartCheck("./", "Identity and Trust")
-                            }
                         }
                     }
                 }
