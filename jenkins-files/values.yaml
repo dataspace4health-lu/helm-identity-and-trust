@@ -1,0 +1,27 @@
+wallet-ui: 
+  image:
+    repository: registry_domain
+    name: image_name
+    tag: "0.0.1"
+    pullSecrets: acr-creds
+
+wallet-api:
+  image:
+    repository: registry_domain
+    name: image_name
+    tag: "0.0.1"
+    pullSecrets: acr-creds
+
+idp-api: 
+  image:
+    repository: registry_domain
+    name: "image_name"
+    tag: "0.0.1"
+    pullSecrets: acr-creds
+
+issuer-api: 
+  image:
+    repository: registry_domain
+    name: "image_name"
+    tag: "0.0.1"
+    pullSecrets: acr-creds

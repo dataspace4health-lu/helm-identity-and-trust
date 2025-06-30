@@ -1,9 +1,20 @@
 iam:
   nameOverride: iam
+  extraConfigMap: |-
+    keyfile.json: |-
+      {
+        "kty": "OKP",
+        "d": "fcMKCbtj4f14DdZtiBCzPqRkGQPNmsl0nt3IwU1HtLg",
+        "use": "sig",
+        "crv": "Ed25519",
+        "kid": "z6MkqmaCT2JqdUtLeKah7tEVfNXtDXtQyj4yxEgV11Y5CqUa",
+        "x": "lqXp4SMT6En9uF130rLeNsan8-790AJ10RqeC7oQHe4",
+        "alg": "EdDSA"
+      }
   keycloak:
     nameOverride: iam-keycloak
     image:
-      tag: 23.0.7-debian-12-r1
+      tag: 21.1.2-debian-11-r27
     containerSecurityContext:
       readOnlyRootFilesystem: false
     initContainers:
@@ -29,7 +40,6 @@ iam:
           }
           wait-for-url ${url}
     - name: iam-keycloak-vc-issuer-init
-      #image: quay.io/fiware/keycloak-vc-issuer:1.0.3
       image: ds4h-registry:5432/fiware/keycloak-vc-issuer
       imagePullPolicy: Always
       volumeMounts:
@@ -68,11 +78,17 @@ iam:
       value: http://iat-issuer-api.default.svc.cluster.local
     - name: VCISSUER_ISSUER_DID
       value: did:web:dataspace4health.local:wallet:api:wallet-api:registry:0
+    - name: VCISSUER_ISSUER_KEY_FILE
+      value: /opt/keys/keyfile.json
     extraVolumeMounts:
     - name: config
       mountPath: "/opt/bitnami/keycloak/data/import/iam-realm.json"
       subPath: "iam-realm.json"
       readOnly: true
+    # - name: extra-config
+    #   mountPath: "/opt/keys/keyfile.json"
+    #   subPath: "keyfile.json"
+    #   readOnly: true
     - name: fiware-lib
       mountPath: "/opt/bitnami/keycloak/custom_providers/"
     - name: fiware-data
@@ -88,6 +104,12 @@ iam:
         items:
         - key: "iam-realm.json"
           path: "iam-realm.json"
+    # - name: extra-config
+    #   configMap:
+    #     name: iat-iam-extra-configmap
+    #     items:
+    #     - key: "keyfile.json"
+    #       path: "keyfile.json"
     - name: fiware-lib
     - name: fiware-data
       emptyDir: {}
