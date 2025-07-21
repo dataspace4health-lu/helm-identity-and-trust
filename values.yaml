@@ -55,7 +55,7 @@ iam:
         keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore /tmp/truststores/cacerts
       done
 
-      cp /opt/bitnami/keycloak/custom_providers/vc-issuer.jar /opt/bitnami/keycloak/providers/
+      cp /opt/bitnami/keycloak/custom_providers/vc-issuer-*.jar /opt/bitnami/keycloak/providers/
       cp /opt/bitnami/keycloak/custom_providers/WaltID-ServiceMatrix-*.jar /opt/bitnami/keycloak/providers/
       cp /opt/bitnami/keycloak/custom_providers/waltid*.jar /opt/bitnami/keycloak/providers/
       cp /opt/bitnami/keycloak/custom_providers/kotlin*.jar /opt/bitnami/keycloak/providers/
