@@ -142,7 +142,7 @@ spec:
           items:
             - key: init-script.sh
               path: init-script.sh
-          defaultMode: 0766
+          defaultMode: 0550
       - name: data-volume
         persistentVolumeClaim:
           claimName: {{ template "app.chartname" . }}-data
