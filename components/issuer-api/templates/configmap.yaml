@@ -26,12 +26,6 @@ data:
 
     echo "Running key import script"
                   
-    # Install curl if not present
-    if ! command -v curl &> /dev/null; then
-      echo "Installing curl..." | tee -a /tmp/poststart.log
-      apt-get update && apt-get install -y curl
-    fi
-    
     body=""
     code=0
 

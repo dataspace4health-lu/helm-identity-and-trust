@@ -53,8 +53,9 @@ spec:
             done
             {{- end }}
 
-
-            /bin/bash /scripts/init-script.sh &
+            
+            # JAVA_OPTS="-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG" bin/waltid-ssikit serve -b 0.0.0.0
+            /app/bin/init-script.sh &
 
             echo "Starting SSIKit server (foreground)"
             /app/bin/waltid-ssikit serve -b 0.0.0.0
@@ -105,7 +106,8 @@ spec:
             subPath: "signatory.conf"
             readOnly: true
           - name: init-script
-            mountPath: "/scripts"
+            mountPath: "/app/bin/init-script.sh"
+            subPath: "init-script.sh"
             readOnly: true
           - mountPath: "/app/data/credential-store"
             name: data-volume
@@ -137,7 +139,10 @@ spec:
       - name: init-script
         configMap:
           name: "{{ template "app.chartname" . }}-init-script"
-          defaultMode: 0755
+          items:
+            - key: init-script.sh
+              path: init-script.sh
+          defaultMode: 0766
       - name: data-volume
         persistentVolumeClaim:
           claimName: {{ template "app.chartname" . }}-data
