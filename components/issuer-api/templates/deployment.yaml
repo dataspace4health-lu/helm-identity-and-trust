@@ -54,10 +54,10 @@ spec:
             {{- end }}
 
             
-            # JAVA_OPTS="-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG" bin/waltid-ssikit serve -b 0.0.0.0
             /app/bin/init-script.sh &
 
             echo "Starting SSIKit server (foreground)"
+            # JAVA_OPTS="-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG" bin/waltid-ssikit serve -b 0.0.0.0
             /app/bin/waltid-ssikit serve -b 0.0.0.0
             
         {{- if .Values.useSecretRef }}
