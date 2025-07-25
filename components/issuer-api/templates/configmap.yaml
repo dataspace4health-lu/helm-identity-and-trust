@@ -41,7 +41,6 @@ data:
     #################################################
     # Wait for SSIKit to be ready
     #################################################
-
     wait-for-url http://localhost:7002/health
 
     #################################################
@@ -49,11 +48,9 @@ data:
     #################################################
     wait-for-url http://{{ .Values.config.issuer.did | replace "did:web:" "" | replace ":" "/" }}/did.json
 
-
     #################################################
     # Get DID document
     #################################################
-
     response=$(curl -s -w "|%{http_code}" \
       http://{{ .Values.config.issuer.did | replace "did:web:" "" | replace ":" "/" }}/did.json)
     body=$(echo $response | awk -F '|' '{print $1}')

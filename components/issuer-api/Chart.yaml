@@ -2,4 +2,4 @@ apiVersion: v2
 appVersion:  v1.0.0
 description: Walt.id SSI Kit Deployment
 name: issuer-api
-version: 1.0.0
+version: 1.0.1

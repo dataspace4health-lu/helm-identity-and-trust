@@ -52,14 +52,12 @@ spec:
               keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore ${JAVA_HOME}/lib/security/cacerts
             done
             {{- end }}
-
             
             /app/bin/init-script.sh &
 
-            echo "Starting SSIKit server (foreground)"
+            echo "Starting SSIKit server"
             # JAVA_OPTS="-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG" bin/waltid-ssikit serve -b 0.0.0.0
             /app/bin/waltid-ssikit serve -b 0.0.0.0
-            
         {{- if .Values.useSecretRef }}
         envFrom:
           - secretRef:
