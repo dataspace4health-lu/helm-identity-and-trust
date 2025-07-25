@@ -43,7 +43,7 @@ spec:
         args:
           - -c
           - |
-            set -x
+            set -e
             
             {{- if and .Values.ingress.tls (gt (len .Values.ingress.tls) 0) }}
             for f in /opt/{{ .Values.name }}/certs/*.crt; do 
@@ -52,8 +52,10 @@ spec:
               keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore ${JAVA_HOME}/lib/security/cacerts
             done
             {{- end }}
+            
+            /app/bin/init-script.sh &
 
-            echo "Starting SSIKit" 
+            echo "Starting SSIKit server"
             # JAVA_OPTS="-Dorg.slf4j.simpleLogger.defaultLogLevel=DEBUG" bin/waltid-ssikit serve -b 0.0.0.0
             /app/bin/waltid-ssikit serve -b 0.0.0.0
         {{- if .Values.useSecretRef }}
@@ -101,6 +103,10 @@ spec:
             mountPath: "/app/config/signatory.conf"
             subPath: "signatory.conf"
             readOnly: true
+          - name: init-script
+            mountPath: "/app/bin/init-script.sh"
+            subPath: "init-script.sh"
+            readOnly: true
           - mountPath: "/app/data/credential-store"
             name: data-volume
           - mountPath: "/app/data/revocation"
@@ -128,6 +134,13 @@ spec:
             - key: signatory.conf
               path: signatory.conf
           name: "{{ template "app.chartname" . }}-signatory"
+      - name: init-script
+        configMap:
+          name: "{{ template "app.chartname" . }}-init-script"
+          items:
+            - key: init-script.sh
+              path: init-script.sh
+          defaultMode: 0550
       - name: data-volume
         persistentVolumeClaim:
           claimName: {{ template "app.chartname" . }}-data
