@@ -964,7 +964,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "guEUWC8n7dR0XNW9T7nC0d6qwS0v2k4j",
+      "secret": "ALcbdI2VfxMa0hYVg2yo28hNSYGUzEnY",
       "redirectUris": [
         "https://dataspace4health.local/data-exchange/*"
       ],
