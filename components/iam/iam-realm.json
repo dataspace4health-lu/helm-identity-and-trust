@@ -957,7 +957,7 @@
       ]
     },
     {
-      "clientId": "data-exchange-service",
+      "clientId": "data-provision-service",
       "name": "Data Exchange Service",
       "description": "Client for data exchange service",
       "surrogateAuthRequired": false,
@@ -966,7 +966,7 @@
       "clientAuthenticatorType": "client-secret",
       "secret": "ALcbdI2VfxMa0hYVg2yo28hNSYGUzEnY",
       "redirectUris": [
-        "https://dataspace4health.local/data-exchange/*"
+        "https://dataspace4health.local/data/api/v1*"
       ],
       "webOrigins": [],
       "notBefore": 0,
