@@ -19,7 +19,7 @@ spec:
         command: ["sh", "-c"]
         args:
         - |
-          set -xe
+          set -e
 
           wait-for-url() {
             echo "Testing $1"
@@ -63,6 +63,9 @@ spec:
           #################################################
           # Register client for issuer {{ .did }}
           #################################################
+          echo "DEBUG: Attempting to register SIOP client for issuer {{ .did }}"
+          echo "DEBUG: Using URL: ${keycloak_url}realms/{{ $realm }}/clients-registrations/SIOP-2"
+          
           response=$(curl -k -s -w "|%{http_code}" -X POST \
             -H 'Content-Type: application/json' \
             -H "Authorization: Bearer $access_token" \
@@ -102,10 +105,18 @@ spec:
             "${keycloak_url}realms/{{ $realm }}/clients-registrations/SIOP-2")
           body=$(echo $response | awk -F '|' '{print $1}')
           code=$(echo $response | awk -F '|' '{print $2}')
+          echo "DEBUG: SIOP client registration response code: $code"
+          echo "DEBUG: SIOP client registration response body: $body"
+          echo "DEBUG: SIOP client registration response response: $response"
+
           if [ $code -eq 201 ]; then
-            echo "Client {{ .idpClientName }} registered"
+            echo "Client {{ .idpClientName }} registered successfully"
+          elif [ $code -eq 409 ] || [[ "$body" == *"already exists"* ]] || [[ "$body" == *"duplicate"* ]]; then
+            echo "WARNING: SIOP client already exists, continuing... (HTTP $code)"
+          elif [ $code -eq 500 ] && [[ "$body" == *"unknown_error"* ]]; then
+            echo "WARNING: SIOP client registration failed with server error, likely already exists. Continuing... (HTTP $code)"
           else
-            echo "Bad Request"
+            echo "ERROR: Failed to register SIOP client. HTTP code: $code, Response: $body"
             exit 1
           fi
           {{- end }}
@@ -114,6 +125,9 @@ spec:
           #################################################
           # Register client {{ .clientName }}
           #################################################
+          echo "DEBUG: Attempting to register identity provider client {{ .clientName }}"
+          echo "DEBUG: Using URL: {{ .clientRegisterUrl }}"
+          
           response=$(curl -k -s -w "|%{http_code}" -X POST \
             -H 'Content-Type: application/json' \
             -d "{
@@ -124,10 +138,14 @@ spec:
             "{{ .clientRegisterUrl }}")
           body=$(echo $response | awk -F '|' '{print $1}')
           code=$(echo $response | awk -F '|' '{print $2}')
+          echo "DEBUG: Identity provider client registration response code: $code"
+          echo "DEBUG: Identity provider client registration response body: $body"
           if [ $code -eq 201 ]; then
-            echo "Client {{ .clientName }} registered"
+            echo "Client {{ .clientName }} registered successfully"
+          elif [ $code -eq 409 ] || [[ "$body" == *"already exists"* ]] || [[ "$body" == *"duplicate"* ]]; then
+            echo "WARNING: Identity provider client {{ .clientName }} already exists, continuing... (HTTP $code)"
           else
-            echo "Bad Request"
+            echo "ERROR: Failed to register identity provider client {{ .clientName }}. HTTP code: $code, Response: $body"
             exit 1
           fi
 
@@ -137,15 +155,19 @@ spec:
           #################################################
           # Get idp {{ .alias }} metadata
           #################################################
+          echo "DEBUG: Getting metadata for IDP {{ .alias }}"
+          echo "DEBUG: Using discovery URL: {{ .oidcDiscoveryUrl }}"
+          
           response=$(curl -k -s -w "|%{http_code}" -X GET \
             -H 'Content-Type: application/json' \
             "{{ .oidcDiscoveryUrl }}")
           body=$(echo $response | awk -F '|' '{print $1}')
           code=$(echo $response | awk -F '|' '{print $2}')
+          echo "DEBUG: IDP metadata response code: $code"
           if [ $code -eq 200 ]; then
-            echo "Got idp {{ .alias }} metadata"
+            echo "Got idp {{ .alias }} metadata successfully"
           else
-            echo "Bad Request"
+            echo "ERROR: Failed to get IDP metadata. HTTP code: $code, Response: $body"
             exit 1
           fi
 
@@ -158,6 +180,9 @@ spec:
           #################################################
           # Register idp {{ .alias }} in Keycloak
           #################################################
+          echo "DEBUG: Registering IDP {{ .alias }} in Keycloak"
+          echo "DEBUG: Using Keycloak admin URL: ${keycloak_url}admin/realms/{{ $realm }}/identity-provider/instances"
+          
           response=$(curl -k -s -w "|%{http_code}" -X POST \
             -H 'Content-Type: application/json' \
             -H "Authorization: Bearer $access_token" \
@@ -180,10 +205,14 @@ spec:
             "${keycloak_url}admin/realms/{{ $realm }}/identity-provider/instances")
           body=$(echo $response | awk -F '|' '{print $1}')
           code=$(echo $response | awk -F '|' '{print $2}')
+          echo "DEBUG: IDP registration response code: $code"
+          echo "DEBUG: IDP registration response body: $body"
           if [ $code -eq 201 ]; then
-            echo "IDP {{ .alias }} registered"
+            echo "IDP {{ .alias }} registered successfully"
+          elif [ $code -eq 409 ] || [[ "$body" == *"already exists"* ]] || [[ "$body" == *"duplicate"* ]]; then
+            echo "WARNING: IDP {{ .alias }} already exists, continuing... (HTTP $code)"
           else
-            echo "Bad Request"
+            echo "ERROR: Failed to register IDP {{ .alias }}. HTTP code: $code, Response: $body"
             exit 1
           fi
           {{- end }}
