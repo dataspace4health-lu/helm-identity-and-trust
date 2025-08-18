@@ -23,7 +23,7 @@ spec:
           
           body=""
           code=0
-
+          
           wait-for-url() {
             echo "Testing $1"
             timeout -s TERM 200 sh -c \
@@ -103,8 +103,9 @@ spec:
           fi
 
           walletId=$(echo $body | grep -m1 -oE '"id":"[^"]+"' | awk -F ':' '{gsub(/"/,"",$2); print $2}')
+          
           #################################################
-          # Get existing default DID
+          # Check if target DID already exists
           #################################################
           response=$(curl -s -w "|%{http_code}" -X 'GET' \
             "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids" \
@@ -118,6 +119,15 @@ spec:
             echo "Invalid authentication"
             exit 1
           fi
+
+          # Check if the target DID already exists
+          TARGET_DID="did:web:{{ .Values.config.registrationDefaults.did.domain }}{{ default "" (trimSuffix "/" .Values.config.registrationDefaults.did.path | replace "/" ":") }}:wallet-api:registry:0"
+          if echo "$body" | grep -q "$TARGET_DID"; then
+            echo "Target DID $TARGET_DID already exists. Skipping initialization process."
+            exit 0
+          fi
+
+          echo "Target DID $TARGET_DID not found. Proceeding with initialization..."
 
           did=$(echo $body | grep -m1 -oE '"did":"[^"]+"' | awk -F '":"' '{gsub(/"/,"",$2); print $2}')
 
@@ -179,7 +189,7 @@ spec:
           # Create new DID
           #################################################
           response=$(curl -s -w "|%{http_code}" -X 'POST' \
-            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/create/web?keyId=$keyId&domain={{ .Values.config.registrationDefaults.did.domain }}&path={{ if .Values.config.registrationDefaults.did.path }}{{ .Values.config.registrationDefaults.did.path }}/wallet-api/registry/0{{ end }}&alias={{ .Values.config.registrationDefaults.did.domain }}" \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/create/web?keyId=$keyId&domain={{ .Values.config.registrationDefaults.did.domain }}&path={{ default "" (trimSuffix "/" .Values.config.registrationDefaults.did.path) }}/wallet-api/registry/0&alias={{ .Values.config.registrationDefaults.did.domain }}" \
             -H 'accept: */*' \
             -H "Authorization: Bearer $token")
           body=$(echo $response | awk -F '|' '{print $1}')
@@ -192,7 +202,7 @@ spec:
           fi
 
           did=$(echo $body | awk '{gsub(/ /,"",$1); print $1}')
-
+          echo "New DID: $did"
           #################################################
           # Set new DID as default
           #################################################

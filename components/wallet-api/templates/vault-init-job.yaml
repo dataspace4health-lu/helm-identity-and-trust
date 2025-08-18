@@ -19,7 +19,7 @@ spec:
         command: ["sh", "-c"]
         args:
         - |
-          set -xe
+          set -e
 
           export VAULT_ADDR="http://{{ include "app.chartname" . }}-vault-server-headless.{{ .Release.Namespace }}.svc.cluster.local:8200"
           {{- range $index, $element := .Values.vault.server.args }}
@@ -30,13 +30,25 @@ spec:
           {{- end }}
           {{- end }}
           
+          echo "DEBUG: Waiting for Vault to be ready..."
           # give some time for Vault to start and be ready
           sleep 15
 
+          echo "DEBUG: Testing Vault connectivity..."
+          vault status
+
+          echo "DEBUG: Logging into Vault..."
           vault login -no-store $VAULT_TOKEN
 
-          # enable vault transit engine
-          vault secrets enable transit
+          echo "DEBUG: Checking if transit engine already exists..."
+          # Check if transit engine is already enabled
+          if vault secrets list | grep -q "transit/"; then
+            echo "WARNING: Transit engine already enabled, skipping..."
+          else
+            echo "DEBUG: Enabling vault transit engine..."
+            vault secrets enable transit
+            echo "DEBUG: Transit engine enabled successfully"
+          fi
 
           # create key1 with type ecdsa-p256
           #vault write -f transit/keys/key1 type=ecdsa-p256
@@ -47,6 +59,7 @@ spec:
           # create key3 with type rsa-4096
           #vault write -f transit/keys/key3 type=rsa-4096
 
+          echo "DEBUG: Vault initialization completed successfully"
           exit
       restartPolicy: Never
   backoffLimit: 4
