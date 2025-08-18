@@ -23,8 +23,7 @@ spec:
           
           body=""
           code=0
-          TARGET_DID="{{ .Values.config.registrationDefaults.did.targetDid }}"
-
+          
           wait-for-url() {
             echo "Testing $1"
             timeout -s TERM 200 sh -c \
@@ -122,6 +121,7 @@ spec:
           fi
 
           # Check if the target DID already exists
+          TARGET_DID="did:web:{{ .Values.config.registrationDefaults.did.domain }}{{ default "" (trimSuffix "/" .Values.config.registrationDefaults.did.path | replace "/" ":") }}:wallet-api:registry:0"
           if echo "$body" | grep -q "$TARGET_DID"; then
             echo "Target DID $TARGET_DID already exists. Skipping initialization process."
             exit 0
@@ -189,7 +189,7 @@ spec:
           # Create new DID
           #################################################
           response=$(curl -s -w "|%{http_code}" -X 'POST' \
-            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/create/web?keyId=$keyId&domain={{ .Values.config.registrationDefaults.did.domain }}&path={{ if .Values.config.registrationDefaults.did.path }}{{ .Values.config.registrationDefaults.did.path }}/wallet-api/registry/0{{ end }}&alias={{ .Values.config.registrationDefaults.did.domain }}" \
+            "http://{{ template "app.chartname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.config.http.port }}/wallet-api/wallet/$walletId/dids/create/web?keyId=$keyId&domain={{ .Values.config.registrationDefaults.did.domain }}&path={{ default "" (trimSuffix "/" .Values.config.registrationDefaults.did.path) }}/wallet-api/registry/0&alias={{ .Values.config.registrationDefaults.did.domain }}" \
             -H 'accept: */*' \
             -H "Authorization: Bearer $token")
           body=$(echo $response | awk -F '|' '{print $1}')
