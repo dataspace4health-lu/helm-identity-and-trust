@@ -35,20 +35,57 @@ data:
             "claim": "email",
             "credentialType": "NaturalPerson",
             "valuePath": "$.credentialSubject.email"
+          },
+          {
+            "scope": [ "profile" ],
+            "claim": "contract",
+            "credentialType": "gx:ServiceOffering",
+            "valuePath": "$.credentialSubject[0].gx:name"
           }
         ],
         "default_vp_token_claim": {
           "presentation_definition": {
             "id": "1",
+            "submission_requirements": [
+              {
+                "name": "Require both NaturalPerson and ServiceOffering",
+                "rule": "pick",
+                "from": "required-credentials"
+              }
+            ],
             "input_descriptors": [
               {
-                "id": "1",
+                "id": "natural-person",
+                "group": ["required-credentials"],
+                "name": "Natural Person Credential",
                 "constraints": {
                   "fields": [
                     {
-                      "id": "1",
-                      "path": [ "$.type" ],
-                      "filter": { "const": "NaturalPerson" }
+                      "path": ["$.type"],
+                      "filter": {
+                        "type": "array",
+                        "contains": {
+                          "const": "NaturalPerson"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "service-offering",
+                "group": ["required-credentials"],
+                "name": "Service Offering Credential",
+                "constraints": {
+                  "fields": [
+                    {
+                      "path": ["$.type"],
+                      "filter": {
+                        "type": "array",
+                        "contains": {
+                          "const": "gx:ServiceOffering"
+                        }
+                      }
                     }
                   ]
                 }
