@@ -76,6 +76,54 @@ config:
   #verifierUiUrl: https://dataspace4health.local/verifier/ui
   verifierApiUrl: https://dataspace4health.local/verifier/api/v1 # important! must be full url
   walletUrl: /wallet/ui
+  claimConfig: |
+    {
+      "vc_mappings": [
+        {
+          "scope": [ "profile" ],
+          "claim": "name",
+          "credentialType": "NaturalPerson",
+          "valuePath": "$.credentialSubject.firstName $.credentialSubject.familyName"
+        },
+        {
+          "scope": [ "profile" ],
+          "claim": "family_name",
+          "credentialType": "NaturalPerson",
+          "valuePath": "$.credentialSubject.familyName"
+        },
+        {
+          "scope": [ "profile" ],
+          "claim": "given_name",
+          "credentialType": "NaturalPerson",
+          "valuePath": "$.credentialSubject.firstName"
+        },
+        {
+          "scope": [ "email" ],
+          "claim": "email",
+          "credentialType": "NaturalPerson",
+          "valuePath": "$.credentialSubject.email"
+        }
+      ],
+      "default_vp_token_claim": {
+        "presentation_definition": {
+          "id": "1",
+          "input_descriptors": [
+            {
+              "id": "1",
+              "constraints": {
+                "fields": [
+                  {
+                    "id": "1",
+                    "path": [ "$.type" ],
+                    "filter": { "const": "NaturalPerson" }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
   http:
     host: ""
     port: 8080
