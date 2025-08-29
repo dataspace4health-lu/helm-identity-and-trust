@@ -10,8 +10,7 @@ data:
       "externalUrl": {{ .Values.config.externalUrl | quote }},
       "openClientRegistration": true,
       "fallbackAuthorizationMode": "SIOP",
-      "claimConfig": |
-        {{ fromJson .Values.config.claimConfig | toJson }}
+      "claimConfig": {{ fromJson .Values.config.claimConfig | toJson }}
     }
   # SIOP Manager configuration (SIOP derived from the Verifer Manager)
   verifier-config.json: |
