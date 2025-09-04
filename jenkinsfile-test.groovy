@@ -11,13 +11,13 @@ properties([
 helmPipeline(
     NODE_NAME: params.NODE_NAME,
     BRANCH: params.BRANCH,
-    IMG_PAHTS: 'select(.kind == "Deployment" and .metadata.labels."app.kubernetes.io/name" == "idp-api") | .spec.template.spec.containers[0].image,
+    IMG_PAHTS: """select(.kind == "Deployment" and .metadata.labels."app.kubernetes.io/name" == "idp-api") | .spec.template.spec.containers[0].image,
                 select(.kind == "Deployment" and .metadata.labels."app.kubernetes.io/name" == "issuer-api") | .spec.template.spec.containers[0].image,
                 select(.kind == "Deployment" and .metadata.labels."app.kubernetes.io/name" == "wallet-api") | .spec.template.spec.containers[0].image,
-                select(.kind == "Deployment" and .metadata.labels."app.kubernetes.io/name" == "wallet-ui") | .spec.template.spec.containers[0].image',
-    IMG_JOBS: 'DS4H/test-antonio-docker/waltid-idpkit,
+                select(.kind == "Deployment" and .metadata.labels."app.kubernetes.io/name" == "wallet-ui") | .spec.template.spec.containers[0].image""",
+    IMG_JOBS: """DS4H/test-antonio-docker/waltid-idpkit,
                 DS4H/test-antonio-docker/waltid-ssikit,
                 DS4H/test-antonio-docker/waltid-identity-wallet-api,
-                DS4H/test-antonio-docker/walitd-identity-wallet-ui',
+                DS4H/test-antonio-docker/walitd-identity-wallet-ui""",
     PUBLISH_HELM: params.PUBLISH_HELM
 )
