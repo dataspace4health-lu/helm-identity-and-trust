@@ -68,6 +68,20 @@ spec:
         env:
         - name: WALTID_DATA_ROOT
           value: "/waltid/idp"
+        - name: KEYCLOAK_URL
+          value: "https://dataspace4health.local/iam"
+        - name: KEYCLOAK_REALM
+          value: "ds4h"
+        - name: KEYCLOAK_CLIENT_ID
+          value: "federated-catalogue"
+        - name: KEYCLOAK_DEFAULT_GROUP # Default Group to be set
+          value: "did:web:portal.dataspace4health.lu:wallet:api:wallet-api:registry:lih"
+        - name: KEYCLOAK_DEFAULT_ROLE # Default Group to be set if not Role please set this NO_ROLE availebal roles for FC: Ro-SD-A, Ro-PA-A,Ro-MU-CA and Ro-MU-A
+          value: "Ro-PA-A"
+        - name: KEYCLOAK_ADMIN_USERNAME
+          value: "admin"
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          value: "xfsc4Ntt!"
         {{- end }}
         {{- if .Values.secretEnv }}
           {{- range $key, $value := .Values.secretEnv }}
