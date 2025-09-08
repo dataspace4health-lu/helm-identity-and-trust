@@ -47,7 +47,25 @@ spec:
             for f in /opt/{{ .Values.name }}/certs/*.crt; do 
               echo "Adding certificate $f to keystore"
               certname=$(echo $(basename $f) | sed 's|.crt||g' )
-              keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore ${JAVA_HOME}/lib/security/cacerts
+              keytool -import -trustcacerts -noprompt -storepass changeit -alias ${certname} -file $f -keystore ${JAVA_HOME}/lib/security/cacerts
+            done
+
+            domains=$(echo "${TRUSTED_DOMAINS}" | tr ',' ' ')
+            for domain in ${domains}; do
+              echo "Processing domain: $domain"
+            
+              # Get TLS certificate
+              echo | openssl s_client -showcerts -connect ${domain}:443 2>/dev/null | \
+                openssl x509 -outform PEM > "/tmp/${domain}.crt"
+            
+              # Import TLS certificate to keystore
+              keytool -import -trustcacerts -noprompt -storepass changeit \
+                -alias "${domain}" \
+                -file "/tmp/${domain}.crt" \
+                -keystore "${JAVA_HOME}/lib/security/cacerts"
+            
+              # Clean up
+              rm -f "/tmp/${item}.crt"
             done
             
             # Workaroud for IDP Kit not able to create this folder when resolvivng DID
