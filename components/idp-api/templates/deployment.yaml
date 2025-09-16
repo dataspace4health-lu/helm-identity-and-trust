@@ -85,7 +85,17 @@ spec:
         {{- else }}
         env:
         - name: WALTID_DATA_ROOT
-          value: "/waltid/idp"
+          value: {{ .Values.config.env.WALTID_DATA_ROOT | quote }}
+        - name: KEYCLOAK_URL
+          value: {{ .Values.config.env.KEYCLOAK_URL | quote }}
+        - name: KEYCLOAK_REALM
+          value: {{ .Values.config.env.KEYCLOAK_REALM | quote }}
+        - name: KEYCLOAK_CLIENT_ID
+          value: {{ .Values.config.env.KEYCLOAK_CLIENT_ID | quote }}
+        - name: KEYCLOAK_CLIENT_SECRET
+          value: {{ .Values.config.env.KEYCLOAK_CLIENT_SECRET | quote }}
+        - name: KEYCLOAK_DEFAULT_ROLE
+          value: {{ .Values.config.env.KEYCLOAK_DEFAULT_ROLE | quote }}
         {{- end }}
         {{- if .Values.secretEnv }}
           {{- range $key, $value := .Values.secretEnv }}
