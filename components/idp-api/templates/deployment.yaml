@@ -76,8 +76,6 @@ spec:
           value: {{ .Values.config.env.KEYCLOAK_CLIENT_ID | quote }}
         - name: KEYCLOAK_CLIENT_SECRET
           value: {{ .Values.config.env.KEYCLOAK_CLIENT_SECRET | quote }}
-        - name: KEYCLOAK_DEFAULT_GROUP
-          value: {{ .Values.config.env.KEYCLOAK_DEFAULT_GROUP | quote }}
         - name: KEYCLOAK_DEFAULT_ROLE
           value: {{ .Values.config.env.KEYCLOAK_DEFAULT_ROLE | quote }}
         {{- end }}

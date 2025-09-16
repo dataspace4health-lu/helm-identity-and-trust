@@ -83,8 +83,6 @@ config:
     KEYCLOAK_CLIENT_ID: "federated-catalogue"
     # -- Keycloak client secret
     KEYCLOAK_CLIENT_SECRET: "cf|J{G3z7a,@su5j(EJzq^G$a6)4D9"
-    # -- Default group to be set
-    KEYCLOAK_DEFAULT_GROUP: "did:web:portal.dataspace4health.lu:wallet:api:wallet-api:registry:lih"
     # -- Default role to be set (available roles for FC: Ro-SD-A, Ro-PA-A, Ro-MU-CA and Ro-MU-A)
     KEYCLOAK_DEFAULT_ROLE: "Ro-PA-A"
   
