@@ -173,6 +173,19 @@ iam:
 idp-api:
   nameOverride: idp-api
   config:
+    env:
+      # -- Walt ID data root directory path
+      WALTID_DATA_ROOT: "/waltid/idp"
+      # -- Keycloak server URL
+      KEYCLOAK_URL: "https://dataspace4health.local/iam"
+      # -- Keycloak realm name
+      KEYCLOAK_REALM: "ds4h"
+      # -- Keycloak client ID
+      KEYCLOAK_CLIENT_ID: "federated-catalogue"
+      # -- Keycloak client secret
+      KEYCLOAK_CLIENT_SECRET: "cf|J{G3z7a,@su5j(EJzq^G$a6)4D9"
+      # -- Default role to be set (available roles for FC: Ro-SD-A, Ro-PA-A, Ro-MU-CA and Ro-MU-A)
+      KEYCLOAK_DEFAULT_ROLE: "Ro-PA-A"
     persistance:
       size: 100Mi
     externalUrl: https://dataspace4health.local/idp
