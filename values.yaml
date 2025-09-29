@@ -2,8 +2,6 @@ iam:
   nameOverride: iam
   keycloak:
     nameOverride: iam-keycloak
-    image:
-      tag: 23.0.7-debian-12-r1
     containerSecurityContext:
       readOnlyRootFilesystem: false
     initContainers:
@@ -135,6 +133,10 @@ iam:
         memory: "1Gi" # default 768Mi
     postgresql:
       enabled: true
+      image:
+        registry: bitnamilegacy
+        repository: postgresql
+        tag: 16.2.0-debian-12-r8
       nameOverride: iam-postgresql
       primary:
         persistence:

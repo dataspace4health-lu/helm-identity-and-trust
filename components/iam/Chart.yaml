@@ -19,5 +19,5 @@ dependencies:
     version: 1.0.0
     repository: "https://gitlab.com/api/v4/projects/40471958/packages/helm/stable/"
   - name: keycloak
-    version: 21.0.0
+    version: 21.6.0
     repository: "oci://registry-1.docker.io/bitnamicharts"
