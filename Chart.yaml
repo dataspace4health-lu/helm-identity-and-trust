@@ -16,7 +16,7 @@ appVersion: "1.0.0"
 
 dependencies:
   - name: iam
-    version: 1.0.1
+    version: 1.0.0
     repository: "file://components/iam"
   - name: idp-api
     version: 1.0.0
@@ -25,10 +25,10 @@ dependencies:
     version: 1.0.0
     repository: "file://components/idp-ui"
   - name: wallet-api
-    version: 1.0.1
+    version: 1.0.0
     repository: "file://components/wallet-api"
   - name: issuer-api
-    version: 1.0.1
+    version: 1.0.0
     repository: "file://components/issuer-api"
   - name: wallet-ui
     version: 1.0.0
