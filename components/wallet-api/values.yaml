@@ -77,7 +77,7 @@ postgresql:
   image:
     registry: bitnamilegacy
     repository: postgresql
-    tag: 16.2.0-debian-12-r8
+    tag: 16.2.0-debian-12-r18
   auth:
     postgresPassword: "xfsc4Ntt!"
     database: vc-wallet-api
