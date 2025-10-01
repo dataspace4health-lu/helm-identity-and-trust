@@ -93,6 +93,10 @@ vault:
   injector:
     enabled: false
   server:
+    image:
+      registry: bitnamilegacy
+      repository: vault
+      tag: 1.17.1-debian-12-r3
     command:
       - /bin/bash
       - -c
@@ -112,7 +116,7 @@ vault:
         fi
     sidecars:
     - name: vault-unseal
-      image: docker.io/bitnami/vault:1.17.1-debian-12-r3
+      image: bitnamilegacy/vault:1.17.1-debian-12-r3
       imagePullPolicy: Always
       command:
       - /bin/bash

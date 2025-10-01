@@ -313,8 +313,8 @@ wallet-api:
         enabled: true
         size: 5Gi
   vault:
-    nameOverride: wallet-api-vault
     enabled: true
+    nameOverride: wallet-api-vault
   config:
     walletUiPath: /wallet/ui
     waltidCustodianUrl: http://iat-issuer-api.default.svc.cluster.local:7002
