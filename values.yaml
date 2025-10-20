@@ -3,7 +3,9 @@ iam:
   keycloak:
     nameOverride: iam-keycloak
     image:
-      tag: 21.1.2-debian-11-r27
+      registry: bitnamilegacy
+      repository: keycloak
+      tag: 23.0.7-debian-12-r1
     containerSecurityContext:
       readOnlyRootFilesystem: false
     initContainers:
@@ -29,7 +31,6 @@ iam:
           }
           wait-for-url ${url}
     - name: iam-keycloak-vc-issuer-init
-      #image: quay.io/fiware/keycloak-vc-issuer:1.0.3
       image: ds4h-registry:5432/fiware/keycloak-vc-issuer
       imagePullPolicy: Always
       volumeMounts:
@@ -38,14 +39,32 @@ iam:
     command: ["sh", "-c"]
     args:
     - |
-      for f in /opt/dataspace4health.local/certs/*.pem; do
+      for f in /opt/dataspace4health.local/certs/*.crt; do
         echo "Adding certificate $f to keystore"
         certname=$(echo $(basename $f) | sed 's|.crt||g' )
         mkdir -p /tmp/truststores
-        keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore /tmp/truststores/cacerts
+        keytool -import -trustcacerts -noprompt -storepass changeit -alias ${certname} -file $f -keystore /tmp/truststores/cacerts
       done
 
-      cp /opt/bitnami/keycloak/custom_providers/vc-issuer.jar /opt/bitnami/keycloak/providers/
+      domains=$(echo "${TRUSTED_DOMAINS}" | tr ',' ' ')
+      for domain in ${domains}; do
+        echo "Processing domain: $domain"
+      
+        # Get TLS certificate
+        echo | openssl s_client -showcerts -connect ${domain}:443 2>/dev/null | \
+          openssl x509 -outform PEM > "/tmp/${domain}.crt"
+      
+        # Import TLS certificate to keystore
+        keytool -import -trustcacerts -noprompt -storepass changeit \
+          -alias "${domain}" \
+          -file "/tmp/${domain}.crt" \
+          -keystore /tmp/truststores/cacerts
+      
+        # Clean up
+        rm -f "/tmp/${item}.crt"
+      done
+
+      cp /opt/bitnami/keycloak/custom_providers/vc-issuer-*.jar /opt/bitnami/keycloak/providers/
       cp /opt/bitnami/keycloak/custom_providers/WaltID-ServiceMatrix-*.jar /opt/bitnami/keycloak/providers/
       cp /opt/bitnami/keycloak/custom_providers/waltid*.jar /opt/bitnami/keycloak/providers/
       cp /opt/bitnami/keycloak/custom_providers/kotlin*.jar /opt/bitnami/keycloak/providers/
@@ -68,18 +87,24 @@ iam:
       value: http://iat-issuer-api.default.svc.cluster.local
     - name: VCISSUER_ISSUER_DID
       value: did:web:dataspace4health.local:wallet:api:wallet-api:registry:0
+    - name: VCISSUER_ISSUER_KEY_FILE
+      value: /opt/keys/keyfile.json
     extraVolumeMounts:
     - name: config
       mountPath: "/opt/bitnami/keycloak/data/import/iam-realm.json"
       subPath: "iam-realm.json"
       readOnly: true
+    # - name: extra-config
+    #   mountPath: "/opt/keys/keyfile.json"
+    #   subPath: "keyfile.json"
+    #   readOnly: true
     - name: fiware-lib
       mountPath: "/opt/bitnami/keycloak/custom_providers/"
     - name: fiware-data
       mountPath: "/data"
     - name: dataspace4health-local
-      mountPath: "/opt/dataspace4health.local/certs/dataspace4health.local.pem"
-      subPath: dataspace4health.local.pem
+      mountPath: "/opt/dataspace4health.local/certs/dataspace4health.local.crt"
+      subPath: dataspace4health.local.crt
       readOnly: true
     extraVolumes:
     - name: config
@@ -88,6 +113,12 @@ iam:
         items:
         - key: "iam-realm.json"
           path: "iam-realm.json"
+    # - name: extra-config
+    #   configMap:
+    #     name: iat-iam-extra-configmap
+    #     items:
+    #     - key: "keyfile.json"
+    #       path: "keyfile.json"
     - name: fiware-lib
     - name: fiware-data
       emptyDir: {}
@@ -96,7 +127,7 @@ iam:
         secretName: dataspace4health.local
         items:
           - key: ca.crt
-            path: dataspace4health.local.pem
+            path: dataspace4health.local.crt
         defaultMode: 420
     httpRelativePath: "/iam/"
     logging:
@@ -106,6 +137,10 @@ iam:
         memory: "1Gi" # default 768Mi
     postgresql:
       enabled: true
+      image:
+        registry: bitnamilegacy
+        repository: postgresql
+        tag: 16.2.0-debian-12-r18
       nameOverride: iam-postgresql
       primary:
         persistence:
@@ -144,6 +179,19 @@ iam:
 idp-api:
   nameOverride: idp-api
   config:
+    env:
+      # -- Walt ID data root directory path
+      WALTID_DATA_ROOT: "/waltid/idp"
+      # -- Keycloak server URL
+      KEYCLOAK_URL: "https://dataspace4health.local/iam"
+      # -- Keycloak realm name
+      KEYCLOAK_REALM: "ds4h"
+      # -- Keycloak client ID
+      KEYCLOAK_CLIENT_ID: "federated-catalogue"
+      # -- Keycloak client secret
+      KEYCLOAK_CLIENT_SECRET: "cf|J{G3z7a,@su5j(EJzq^G$a6)4D9"
+      # -- Default role to be set (available roles for FC: Ro-SD-A, Ro-PA-A, Ro-MU-CA and Ro-MU-A)
+      KEYCLOAK_DEFAULT_ROLE: "Ro-PA-A"
     persistance:
       size: 100Mi
     externalUrl: https://dataspace4health.local/idp
@@ -251,6 +299,10 @@ wallet-api:
   postgresql:
     nameOverride: wallet-api-postgresql
     enabled: true
+    image:
+      registry: bitnamilegacy
+      repository: postgresql
+      tag: 16.2.0-debian-12-r18
     auth:
       postgresPassword: "xfsc4Ntt!"
       database: vc-wallet-api
@@ -261,8 +313,8 @@ wallet-api:
         enabled: true
         size: 5Gi
   vault:
-    nameOverride: wallet-api-vault
     enabled: true
+    nameOverride: wallet-api-vault
   config:
     walletUiPath: /wallet/ui
     waltidCustodianUrl: http://iat-issuer-api.default.svc.cluster.local:7002

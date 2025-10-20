@@ -74,6 +74,10 @@ service:
 
 postgresql:
   enabled: true
+  image:
+    registry: bitnamilegacy
+    repository: postgresql
+    tag: 16.2.0-debian-12-r18
   auth:
     postgresPassword: "xfsc4Ntt!"
     database: vc-wallet-api
@@ -89,11 +93,95 @@ vault:
   injector:
     enabled: false
   server:
+    image:
+      registry: bitnamilegacy
+      repository: vault
+      tag: 1.17.1-debian-12-r3
+    command:
+      - /bin/bash
+      - -c
+      - |
+        set -e 
+
+        VAULT_DATA_PATH="/bitnami/vault/data"
+        UNSEAL_LOG_FILE="${VAULT_DATA_PATH}/vault-unseal-log"
+        
+        if [[ ! -s "$UNSEAL_LOG_FILE" ]]; then
+          echo "[INFO] First run — capturing unseal log."
+          vault "$0" "$@" 2>&1 | tee "$UNSEAL_LOG_FILE"
+        else
+          echo "[INFO] Vault already initialized."
+          sed "s|# ||g" /bitnami/vault/config/config.hcl > /bitnami/vault/data/config.hcl
+          vault server -config=/bitnami/vault/data/config.hcl
+        fi
+    sidecars:
+    - name: vault-unseal
+      image: bitnamilegacy/vault:1.17.1-debian-12-r3
+      imagePullPolicy: Always
+      command:
+      - /bin/bash
+      - -c
+      - |
+        set -e 
+
+        VAULT_DATA_PATH="/bitnami/vault/data"
+        UNSEAL_LOG_FILE="${VAULT_DATA_PATH}/vault-unseal-log"
+
+        while [[ ! -s "$UNSEAL_LOG_FILE" || -z $(grep -m1 "Unseal Key:" "$UNSEAL_LOG_FILE") ]]; do
+          echo "[INFO] Waiting for $UNSEAL_LOG_FILE to contain 'Unseal Key'..."
+          sleep 3
+        done
+        
+        UNSEAL_KEY=$(cat "$UNSEAL_LOG_FILE" | awk '/Unseal Key:/ { print $NF }')
+        ROOT_TOKEN=$(cat "$UNSEAL_LOG_FILE" | awk '/Root Token:/ { print $NF }')
+
+        export VAULT_ADDR=http://0.0.0.0:8200
+        export VAULT_TOKEN=$ROOT_TOKEN
+
+        # vault status return codes: 0 - unsealed; 1 - error; 2 - sealed
+        until [[ $(vault status &>/dev/null; echo $?) -ne 1 ]]; do
+          echo "[INFO] Waiting for Vault to be ready..."
+          sleep 3
+        done
+
+        SEALED=$(vault status | grep Sealed | awk -F ' ' '{print $2}')
+        if [[ "$SEALED" == "true" ]]; then
+          echo "[INFO] Unsealing Vault..."
+          vault operator unseal $UNSEAL_KEY > /dev/null 2>&1
+          echo "[INFO] Vault unsealed successfully."
+        fi
+
+        if ! vault secrets list | grep -q "transit/"; then
+          echo "[INFO] Enabling vault transit engine..."
+          vault secrets enable transit > /dev/null 2>&1
+          echo "[INFO] Transit engine enabled successfully."
+        fi
+
+        echo "[INFO] Sleeping..."
+        sleep infinity
+      volumeMounts:
+      - name: data
+        mountPath: /bitnami/vault/data
+        readOnly: false
     args: 
       - server
       - -dev
       - -dev-root-token-id=root
       - -dev-listen-address=0.0.0.0:8200
+      - -config=/bitnami/vault/config/config.hcl
+    config: |
+      disable_mlock = true
+      ui = true
+      # listener "tcp" {
+      #   tls_disable = 1
+      #   address = "0.0.0.0:8200"
+      #   cluster_address = "0.0.0.0:8201"
+      # }
+      storage "raft" {
+        path = "/bitnami/vault/data"
+      }
+
+      service_registration "kubernetes" {}
     persistence:
       size: 5Gi
 

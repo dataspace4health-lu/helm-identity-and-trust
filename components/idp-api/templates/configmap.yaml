@@ -10,53 +10,7 @@ data:
       "externalUrl": {{ .Values.config.externalUrl | quote }},
       "openClientRegistration": true,
       "fallbackAuthorizationMode": "SIOP",
-      "claimConfig": {
-        "vc_mappings": [
-          {
-            "scope": [ "profile" ],
-            "claim": "name",
-            "credentialType": "NaturalPerson",
-            "valuePath": "$.credentialSubject.firstName $.credentialSubject.familyName"
-          },
-          {
-            "scope": [ "profile" ],
-            "claim": "family_name",
-            "credentialType": "NaturalPerson",
-            "valuePath": "$.credentialSubject.familyName"
-          },
-          {
-            "scope": [ "profile" ],
-            "claim": "given_name",
-            "credentialType": "NaturalPerson",
-            "valuePath": "$.credentialSubject.firstName"
-          },
-          {
-            "scope": [ "email" ],
-            "claim": "email",
-            "credentialType": "NaturalPerson",
-            "valuePath": "$.credentialSubject.email"
-          }
-        ],
-        "default_vp_token_claim": {
-          "presentation_definition": {
-            "id": "1",
-            "input_descriptors": [
-              {
-                "id": "1",
-                "constraints": {
-                  "fields": [
-                    {
-                      "id": "1",
-                      "path": [ "$.type" ],
-                      "filter": { "const": "NaturalPerson" }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        }
-      }
+      "claimConfig": {{ fromJson .Values.config.claimConfig | toJson }}
     }
   # SIOP Manager configuration (SIOP derived from the Verifer Manager)
   verifier-config.json: |

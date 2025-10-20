@@ -1,16 +1,36 @@
 keycloak:
   image:
-    tag: 26.0.7-debian-12-r1
+    registry: bitnamilegacy
+    repository: keycloak
+    tag: 23.0.7-debian-12-r1
   command: 
     - /bin/sh
   args:
     - -c
     - |
-      for f in /opt/dataspace4health.local/certs/*.pem; do 
+      for f in /opt/dataspace4health.local/certs/*.crt; do 
         echo "Adding certificate $f to keystore"
         certname=$(echo $(basename $f) | sed 's|.crt||g' )
         mkdir -p /tmp/truststores
-        keytool -import -trustcacerts -noprompt -storepass changeit -alias $(basename $f) -file $f -keystore /tmp/truststores/cacerts
+        keytool -import -trustcacerts -noprompt -storepass changeit -alias ${certname} -file $f -keystore /tmp/truststores/cacerts
+      done
+
+      domains=$(echo "${TRUSTED_DOMAINS}" | tr ',' ' ')
+      for domain in ${domains}; do
+        echo "Processing domain: $domain"
+      
+        # Get TLS certificate
+        echo | openssl s_client -showcerts -connect ${domain}:443 2>/dev/null | \
+          openssl x509 -outform PEM > "/tmp/${domain}.crt"
+      
+        # Import TLS certificate to keystore
+        keytool -import -trustcacerts -noprompt -storepass changeit \
+          -alias "${domain}" \
+          -file "/tmp/${domain}.crt" \
+          -keystore /tmp/truststores/cacerts
+      
+        # Clean up
+        rm -f "/tmp/${item}.crt"
       done
       
       JAVA_OPTS="-Djavax.net.ssl.trustStore=/tmp/truststores/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
@@ -22,8 +42,6 @@ keycloak:
   extraEnvVars:
     - name: KEYCLOAK_EXTRA_ARGS
       value: "--import-realm"
-    - name: KC_FEATURES
-      value: token-exchange,admin-fine-grained-authz # required by Walt.Id Wallet API
     - name: PROXY_ADDRESS_FORWARDING
       value: "true"
   extraVolumeMounts:
@@ -32,8 +50,8 @@ keycloak:
       subPath: "iam-realm.json"
       readOnly: true
     - name: dataspace4health-local
-      mountPath: "/opt/dataspace4health.local/certs/dataspace4health.local.pem"
-      subPath: "dataspace4health.local.pem"
+      mountPath: "/opt/dataspace4health.local/certs/dataspace4health.local.crt"
+      subPath: "dataspace4health.local.crt"
       readOnly: true
   extraVolumes:
     - name: config
@@ -47,7 +65,7 @@ keycloak:
         secretName: dataspace4health.local
         items:
         - key: "ca.crt"
-          path: "dataspace4health.local.pem"
+          path: "dataspace4health.local.crt"
         defaultMode: 420
   # logging:
   #   level: "DEBUG,io.quarkus:INFO,freemarker.cache:INFO,liquibase:INFO,org.hibernate:INFO,org.infinispan:INFO,org.keycloak.services.scheduled:INFO,org.keycloak.transaction:INFO,io.netty.buffer.PoolThreadCache:INFO,org.keycloak.models.sessions.infinispan:INFO"
@@ -56,6 +74,10 @@ keycloak:
   httpRelativePath: "/iam/"
   postgresql:
     enabled: true
+    image:
+      registry: bitnamilegacy
+      repository: postgresql
+      tag: 16.2.0-debian-12-r18
     auth: 
       database: iam
       username: iam 
